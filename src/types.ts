@@ -46,16 +46,18 @@ export interface AuthMessage extends BaseMessage {
 
 export type ChatMessage = SimpleMessage | ActionMessage | AuthMessage;
 
+export interface UserInfo {
+  id: string;
+  email: string;
+  name: string;
+  picture?: string;
+}
+
 export interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    picture?: string;
-  } | null;
+  user: UserInfo | null;
   token: string | null;
 }
 
@@ -76,7 +78,7 @@ export interface AppState {
 
   // Legacy fields for backward compatibility
   isAuthenticated: boolean;
-  userInfo: any | null;
+  userInfo: UserInfo | null;
 }
 
 export interface AppActions {
@@ -102,7 +104,7 @@ export interface AppActions {
 
   // Legacy Auth Management (for backward compatibility)
   setAuthenticated: (isAuth: boolean) => void;
-  setUserInfo: (user: any) => void;
+  setUserInfo: (user: UserInfo) => void;
 }
 
 export interface ModeConfig {
