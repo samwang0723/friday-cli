@@ -2,7 +2,7 @@
 export const OAUTH_CONFIG = {
   TOKEN_PATH: 'token.json',
   REDIRECT_URI: 'http://localhost:8080/callback',
-  PORT: 8080,
+  PORT: Number(process.env.OAUTH_PORT) || 8080,
   AGENT_CORE_BASE_URL:
     process.env.AGENT_CORE_URL || 'http://localhost:3030/api/v1',
   SCOPES: [
