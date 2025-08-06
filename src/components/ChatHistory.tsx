@@ -1,7 +1,7 @@
-import React, { useMemo, memo } from "react";
-import { Box } from "ink";
-import { useApp } from "../context/AppContext.js";
-import { MessageItem } from "./MessageItem.js";
+import React, { useMemo, memo } from 'react';
+import { Box } from 'ink';
+import { useApp } from '../context/AppContext.js';
+import { MessageItem } from './MessageItem.js';
 
 export const ChatHistory = memo(function ChatHistory() {
   const { state } = useApp();
@@ -13,7 +13,7 @@ export const ChatHistory = memo(function ChatHistory() {
 
   const messageElements = useMemo(
     () =>
-      visibleMessages.map((message) => (
+      visibleMessages.map(message => (
         <MessageItem key={message.id} message={message} />
       )),
     [visibleMessages]

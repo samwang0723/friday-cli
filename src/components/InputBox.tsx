@@ -1,8 +1,8 @@
-import React, { useCallback, useMemo, memo } from "react";
-import { Box, Text, useInput } from "ink";
-import { useApp } from "../context/AppContext.js";
-import { ChatMessage, AuthMessage } from "../types.js";
-import { googleLogin, logout, getAuthStatus } from "../services/oauth.js";
+import React, { useCallback, useMemo, memo } from 'react';
+import { Box, Text, useInput } from 'ink';
+import { useApp } from '../context/AppContext.js';
+import { ChatMessage, AuthMessage, AppActions, AuthState } from '../types.js';
+import { googleLogin, logout, getAuthStatus } from '../services/oauth.js';
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -14,7 +14,15 @@ export const InputBox = memo(function InputBox() {
 
   // Keyboard handler that uses state directly instead of refs
   const handleKeyInput = useCallback(
-    (input: string, key: any) => {
+    (
+      input: string,
+      key: {
+        return?: boolean;
+        ctrl?: boolean;
+        meta?: boolean;
+        [key: string]: unknown;
+      }
+    ) => {
       // Handle regular Enter for submit
       if (key.return) {
         if (!currentInput.trim()) return;
@@ -22,14 +30,14 @@ export const InputBox = memo(function InputBox() {
         // Inline submit logic to avoid circular dependency
         const userMessage: ChatMessage = {
           id: generateId(),
-          type: "user",
+          type: 'user',
           content: currentInput,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
         actions.addMessage(userMessage);
         actions.addToCommandHistory(currentInput);
         processMessage(currentInput, actions, currentMode);
-        actions.setCurrentInput("");
+        actions.setCurrentInput('');
         return;
       }
 
@@ -39,12 +47,12 @@ export const InputBox = memo(function InputBox() {
       }
 
       if (key.upArrow) {
-        actions.navigateHistory("up");
+        actions.navigateHistory('up');
         return;
       }
 
       if (key.downArrow) {
-        actions.navigateHistory("down");
+        actions.navigateHistory('down');
         return;
       }
 
@@ -71,12 +79,12 @@ export const InputBox = memo(function InputBox() {
 
   // Handle keyboard input
   useInput(handleKeyInput, {
-    isActive: true
+    isActive: true,
   });
 
   // Memoize input display for performance
   const inputDisplay = useMemo(() => {
-    const inputLines = currentInput.split("\n");
+    const inputLines = currentInput.split('\n');
     const displayLines = inputLines.slice(-10); // Show max 3 lines
 
     return (
@@ -92,7 +100,7 @@ export const InputBox = memo(function InputBox() {
 
   return (
     <Box borderStyle="round" borderColor="blue" paddingX={1}>
-      <Text color="blue">{">"}</Text>
+      <Text color="blue">{'>'}</Text>
       {inputDisplay}
     </Box>
   );
@@ -101,50 +109,50 @@ export const InputBox = memo(function InputBox() {
 // Message processing logic (extracted from original implementation)
 async function processMessage(
   message: string,
-  actions: any,
+  actions: AppActions,
   currentMode: string
 ) {
-  if (message.startsWith("/")) {
+  if (message.startsWith('/')) {
     switch (message.trim()) {
-      case "/help":
+      case '/help':
         actions.addMessage({
           id: generateId(),
-          type: "system",
-          content: "Available commands: /help, /login, /logout, /auth, /exit",
-          timestamp: new Date()
+          type: 'system',
+          content: 'Available commands: /help, /login, /logout, /auth, /exit',
+          timestamp: new Date(),
         });
         actions.addMessage({
           id: generateId(),
-          type: "system",
-          content: "Features: Shift+Tab to switch modes, Up/Down for history",
-          timestamp: new Date()
+          type: 'system',
+          content: 'Features: Shift+Tab to switch modes, Up/Down for history',
+          timestamp: new Date(),
         });
         actions.addMessage({
           id: generateId(),
-          type: "system",
+          type: 'system',
           content:
-            "⚠️  Note: Make sure AgentCore backend is running for authentication",
-          timestamp: new Date()
+            '⚠️  Note: Make sure AgentCore backend is running for authentication',
+          timestamp: new Date(),
         });
         break;
-      case "/exit":
+      case '/exit':
         actions.addMessage({
           id: generateId(),
-          type: "system",
-          content: "Goodbye from Friday! 👋",
-          timestamp: new Date()
+          type: 'system',
+          content: 'Goodbye from Friday! 👋',
+          timestamp: new Date(),
         });
         process.exit(0);
-      case "/login":
+      case '/login':
         // Set loading state
         actions.setAuthLoading(true);
 
         const loadingMessage: AuthMessage = {
           id: generateId(),
-          type: "auth",
-          authType: "loading",
-          content: "🌐 Starting AgentCore OAuth login...",
-          timestamp: new Date()
+          type: 'auth',
+          authType: 'loading',
+          content: '🌐 Starting AgentCore OAuth login...',
+          timestamp: new Date(),
         };
         actions.addMessage(loadingMessage);
 
@@ -156,33 +164,33 @@ async function processMessage(
             const authStatus = getAuthStatus();
             if (authStatus.authenticated && authStatus.user?.user_info) {
               actions.setAuthSuccess(
-                authStatus.user.user_info as any,
+                authStatus.user.user_info as AuthState['user'],
                 authStatus.user.access_token
               );
 
               const successMessage: AuthMessage = {
                 id: generateId(),
-                type: "auth",
-                authType: "success",
+                type: 'auth',
+                authType: 'success',
                 content: result.message,
                 timestamp: new Date(),
                 metadata: {
                   user: {
                     ...authStatus.user.user_info,
-                    id: authStatus.user.user_id
+                    id: authStatus.user.user_id,
                   },
-                  provider: "google"
-                }
+                  provider: 'google',
+                },
               };
               actions.addMessage(successMessage);
             } else {
               // Success but no user data yet
               const partialSuccessMessage: AuthMessage = {
                 id: generateId(),
-                type: "auth",
-                authType: "success",
+                type: 'auth',
+                authType: 'success',
                 content: result.message,
-                timestamp: new Date()
+                timestamp: new Date(),
               };
               actions.addMessage(partialSuccessMessage);
             }
@@ -190,11 +198,11 @@ async function processMessage(
             actions.setAuthError(result.message);
             const errorMessage: AuthMessage = {
               id: generateId(),
-              type: "auth",
-              authType: "error",
+              type: 'auth',
+              authType: 'error',
               content: result.message,
               timestamp: new Date(),
-              metadata: { error: result.message }
+              metadata: { error: result.message },
             };
             actions.addMessage(errorMessage);
           }
@@ -203,27 +211,27 @@ async function processMessage(
           actions.setAuthError(errorMsg);
           const errorMessage: AuthMessage = {
             id: generateId(),
-            type: "auth",
-            authType: "error",
+            type: 'auth',
+            authType: 'error',
             content: errorMsg,
             timestamp: new Date(),
-            metadata: { error: errorMsg }
+            metadata: { error: errorMsg },
           };
           actions.addMessage(errorMessage);
         }
         break;
 
-      case "/logout":
+      case '/logout':
         try {
           const result = await logout();
           actions.clearAuth();
 
           const logoutMessage: AuthMessage = {
             id: generateId(),
-            type: "auth",
-            authType: "success",
+            type: 'auth',
+            authType: 'success',
             content: result.message,
-            timestamp: new Date()
+            timestamp: new Date(),
           };
           actions.addMessage(logoutMessage);
         } catch (error) {
@@ -231,143 +239,143 @@ async function processMessage(
           actions.setAuthError(errorMsg);
           const errorMessage: AuthMessage = {
             id: generateId(),
-            type: "auth",
-            authType: "error",
+            type: 'auth',
+            authType: 'error',
             content: errorMsg,
             timestamp: new Date(),
-            metadata: { error: errorMsg }
+            metadata: { error: errorMsg },
           };
           actions.addMessage(errorMessage);
         }
         break;
 
-      case "/auth":
+      case '/auth':
         const authStatus = getAuthStatus();
         let statusContent: string;
-        let statusMetadata: any = undefined;
+        let statusMetadata: AuthMessage['metadata'] = undefined;
 
         if (authStatus.authenticated && authStatus.user?.user_info) {
           const userInfo = authStatus.user.user_info;
-          statusContent = `✅ Authenticated as ${userInfo.name || "Unknown"} (${
-            userInfo.email || "Unknown"
+          statusContent = `✅ Authenticated as ${userInfo.name || 'Unknown'} (${
+            userInfo.email || 'Unknown'
           })`;
           statusMetadata = {
             user: {
               ...userInfo,
-              id: userInfo.email || userInfo.name || "unknown"
+              id: userInfo.email || userInfo.name || 'unknown',
             },
-            provider: "google"
+            provider: 'google',
           };
         } else {
-          statusContent = "🔒 Not authenticated. Use /login to authenticate.";
+          statusContent = '🔒 Not authenticated. Use /login to authenticate.';
         }
 
         const statusMessage: AuthMessage = {
           id: generateId(),
-          type: "auth",
-          authType: "status",
+          type: 'auth',
+          authType: 'status',
           content: statusContent,
           timestamp: new Date(),
-          metadata: statusMetadata
+          metadata: statusMetadata,
         };
         actions.addMessage(statusMessage);
         break;
       default:
         actions.addMessage({
           id: generateId(),
-          type: "system",
+          type: 'system',
           content: `❌ Unknown command: ${message}. Type /help for available commands.`,
-          timestamp: new Date()
+          timestamp: new Date(),
         });
     }
   } else {
     // Handle different modes
     const actionMessage: ChatMessage = {
       id: generateId(),
-      type: "action",
-      actionType: "description",
+      type: 'action',
+      actionType: 'description',
       content: `Processing ${currentMode} message...`,
-      timestamp: new Date()
+      timestamp: new Date(),
     };
     actions.addMessage(actionMessage);
 
     // Simulate processing time
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     switch (currentMode) {
-      case "text":
+      case 'text':
         // Example file update message
         actions.addMessage({
           id: generateId(),
-          type: "action",
-          actionType: "file_update",
-          content: "Update text processing logic",
+          type: 'action',
+          actionType: 'file_update',
+          content: 'Update text processing logic',
           timestamp: new Date(),
           metadata: {
-            filePath: "src/handlers/text.ts",
+            filePath: 'src/handlers/text.ts',
             additions: 3,
-            removals: 1
-          }
+            removals: 1,
+          },
         });
         break;
 
-      case "voice":
+      case 'voice':
         // Example nested action
         actions.addMessage({
           id: generateId(),
-          type: "action",
-          actionType: "nested",
-          content: "Analyzing audio patterns",
-          timestamp: new Date()
+          type: 'action',
+          actionType: 'nested',
+          content: 'Analyzing audio patterns',
+          timestamp: new Date(),
         });
         break;
 
-      case "thinking":
+      case 'thinking':
         // Example file update with code diff
         actions.addMessage({
           id: generateId(),
-          type: "action",
-          actionType: "file_update",
-          content: "Enhanced reasoning algorithms",
+          type: 'action',
+          actionType: 'file_update',
+          content: 'Enhanced reasoning algorithms',
           timestamp: new Date(),
           metadata: {
-            filePath: "src/thinking.ts",
+            filePath: 'src/thinking.ts',
             additions: 5,
-            removals: 2
-          }
+            removals: 2,
+          },
         });
 
         actions.addMessage({
           id: generateId(),
-          type: "action",
-          actionType: "code_diff",
-          content: "",
+          type: 'action',
+          actionType: 'code_diff',
+          content: '',
           timestamp: new Date(),
           metadata: {
             diffLines: [
               {
                 lineNumber: 42,
-                type: "unchanged",
-                content: "function analyzeMessage(input: string) {"
+                type: 'unchanged',
+                content: 'function analyzeMessage(input: string) {',
               },
               {
                 lineNumber: 43,
-                type: "removed",
-                content: "  return basicAnalysis(input);"
+                type: 'removed',
+                content: '  return basicAnalysis(input);',
               },
               {
                 lineNumber: 43,
-                type: "added",
-                content: "  return deepAnalysis(input, context);"
+                type: 'added',
+                content: '  return deepAnalysis(input, context);',
               },
               {
                 lineNumber: 44,
-                type: "added",
-                content: "  // Enhanced with contextual reasoning"
+                type: 'added',
+                content: '  // Enhanced with contextual reasoning',
               },
-              { lineNumber: 45, type: "unchanged", content: "}" }
-            ]
-          }
+              { lineNumber: 45, type: 'unchanged', content: '}' },
+            ],
+          },
         });
         break;
     }

@@ -1,13 +1,12 @@
-import React, { memo } from "react";
-import { Box, Text } from "ink";
-import { ChatMessage, ActionMessage, DiffLine } from "../types.js";
+import React, { memo } from 'react';
+import { Box, Text } from 'ink';
+import { ChatMessage, ActionMessage } from '../types.js';
 
 interface MessageItemProps {
   message: ChatMessage;
 }
 
 function UserMessage({ message }: { message: ChatMessage }) {
-  const timestamp = message.timestamp.toLocaleTimeString();
   return (
     <Box marginTop={1}>
       <Text color="gray">{`> `}</Text>
@@ -17,19 +16,19 @@ function UserMessage({ message }: { message: ChatMessage }) {
 }
 
 function SystemMessage({ message }: { message: ChatMessage }) {
-  const timestamp = message.timestamp.toLocaleTimeString();
   return (
     <Box marginTop={1}>
-      <Text color="green">{message.content}</Text>
+      <Text color="magentaBright">⏺ </Text>
+      <Text color="magentaBright">{message.content}</Text>
     </Box>
   );
 }
 
-function ActionMessage({ message }: { message: ActionMessage }) {
+function DynamicMessage({ message }: { message: ActionMessage }) {
   const indicator = <Text color="blue">⏺ </Text>;
 
   switch (message.actionType) {
-    case "description":
+    case 'description':
       return (
         <Box marginTop={1}>
           {indicator}
@@ -37,13 +36,13 @@ function ActionMessage({ message }: { message: ActionMessage }) {
         </Box>
       );
 
-    case "file_update":
+    case 'file_update':
       return <FileUpdateMessage message={message} />;
 
-    case "code_diff":
+    case 'code_diff':
       return <CodeDiffMessage message={message} />;
 
-    case "nested":
+    case 'nested':
       return (
         <Box>
           <Text color="gray">⎿ </Text>
@@ -71,7 +70,7 @@ function FileUpdateMessage({ message }: { message: ActionMessage }) {
   if (removals > 0) changesSummary.push(`${removals} removals`);
 
   const changesText =
-    changesSummary.length > 0 ? ` with ${changesSummary.join(" and ")}` : "";
+    changesSummary.length > 0 ? ` with ${changesSummary.join(' and ')}` : '';
 
   return (
     <Box flexDirection="column" marginTop={1}>
@@ -99,11 +98,11 @@ function CodeDiffMessage({ message }: { message: ActionMessage }) {
       {diffLines.map((line, index) => {
         const lineNum = line.lineNumber.toString().padStart(3);
         const prefix =
-          line.type === "added" ? "+" : line.type === "removed" ? "-" : " ";
+          line.type === 'added' ? '+' : line.type === 'removed' ? '-' : ' ';
 
-        let color: "green" | "red" | "gray" = "gray";
-        if (line.type === "added") color = "green";
-        else if (line.type === "removed") color = "red";
+        let color: 'green' | 'red' | 'gray' = 'gray';
+        if (line.type === 'added') color = 'green';
+        else if (line.type === 'removed') color = 'red';
 
         return (
           <Box key={index}>
@@ -120,15 +119,15 @@ function CodeDiffMessage({ message }: { message: ActionMessage }) {
 }
 
 export const MessageItem = memo(function MessageItem({
-  message
+  message,
 }: MessageItemProps) {
   switch (message.type) {
-    case "user":
+    case 'user':
       return <UserMessage message={message} />;
-    case "system":
+    case 'system':
       return <SystemMessage message={message} />;
-    case "action":
-      return <ActionMessage message={message as ActionMessage} />;
+    case 'action':
+      return <DynamicMessage message={message as ActionMessage} />;
     default:
       return null;
   }

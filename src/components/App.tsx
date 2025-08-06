@@ -1,10 +1,9 @@
-import React, { useEffect, useRef, memo, useState } from "react";
-import { Box, useStdout } from "ink";
-import { AppProvider, useApp } from "../context/AppContext.js";
-import { Header } from "./Header.js";
-import { ChatHistory } from "./ChatHistory.js";
-import { InputBox } from "./InputBox.js";
-import { StatusBar } from "./StatusBar.js";
+import React, { useEffect, useRef, memo, useState } from 'react';
+import { Box, useStdout } from 'ink';
+import { AppProvider, useApp } from '../context/AppContext.js';
+import { ChatHistory } from './ChatHistory.js';
+import { InputBox } from './InputBox.js';
+import { StatusBar } from './StatusBar.js';
 
 // Initialization component that doesn't re-render
 function AppInitializer() {
@@ -17,9 +16,9 @@ function AppInitializer() {
       initializedRef.current = true;
       actions.addMessage({
         id: `msg_${Date.now()}_init`,
-        type: "system",
-        content: "Friday AI Assistant initialized. Type your message below.",
-        timestamp: new Date()
+        type: 'system',
+        content: 'Friday AI Assistant initialized. Type your message below.',
+        timestamp: new Date(),
       });
     }
   }, []);
@@ -35,9 +34,9 @@ function useScreenSize() {
 
   useEffect(() => {
     const onResize = () => setSize(getSize());
-    stdout.on("resize", onResize);
+    stdout.on('resize', onResize);
     return () => {
-      stdout.off("resize", onResize);
+      stdout.off('resize', onResize);
     };
   }, [stdout]);
 

@@ -1,7 +1,7 @@
-import React, { memo } from "react";
-import { Box, Text } from "ink";
-import { useApp } from "../context/AppContext.js";
-import { modeConfigs } from "../types.js";
+import React, { memo } from 'react';
+import { Box, Text } from 'ink';
+import { useApp } from '../context/AppContext.js';
+import { modeConfigs } from '../types.js';
 
 export const StatusBar = memo(function StatusBar() {
   const { state } = useApp();
@@ -13,12 +13,12 @@ export const StatusBar = memo(function StatusBar() {
     if (auth.isLoading) {
       return <Text color="yellow">🔄 Authenticating...</Text>;
     }
-    
+
     if (auth.isAuthenticated && auth.user) {
       const displayName = auth.user.name || auth.user.email;
       return <Text color="green">🔓 {displayName}</Text>;
     }
-    
+
     return <Text color="gray">🔒 Not authenticated</Text>;
   };
 
@@ -29,13 +29,11 @@ export const StatusBar = memo(function StatusBar() {
           {icon} {currentMode} mode
         </Text>
         <Text color="gray">
-          {" "}
+          {' '}
           (Shift+Tab: switch · Enter: send · Ctrl+C: exit)
         </Text>
       </Box>
-      <Box>
-        {getAuthDisplay()}
-      </Box>
+      <Box>{getAuthDisplay()}</Box>
     </Box>
   );
 });

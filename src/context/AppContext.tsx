@@ -7,7 +7,14 @@ import React, {
   useEffect,
   ReactNode,
 } from 'react';
-import { AppState, AppActions, ChatMessage, Mode, modes, AuthState } from '../types.js';
+import {
+  AppState,
+  AppActions,
+  ChatMessage,
+  Mode,
+  modes,
+  AuthState,
+} from '../types.js';
 import { getAuthStatus, getToken } from '../services/oauth.js';
 
 // Initial state
@@ -41,11 +48,14 @@ type AppAction =
   // Enhanced auth actions
   | { type: 'SET_AUTH_LOADING'; payload: boolean }
   | { type: 'SET_AUTH_ERROR'; payload: string | null }
-  | { type: 'SET_AUTH_SUCCESS'; payload: { user: AuthState['user']; token: string } }
+  | {
+      type: 'SET_AUTH_SUCCESS';
+      payload: { user: AuthState['user']; token: string };
+    }
   | { type: 'CLEAR_AUTH' }
   // Legacy auth actions (for backward compatibility)
   | { type: 'SET_AUTHENTICATED'; payload: boolean }
-  | { type: 'SET_USER_INFO'; payload: any };
+  | { type: 'SET_USER_INFO'; payload: AuthState['user'] };
 
 // Reducer
 function appReducer(state: AppState, action: AppAction): AppState {
@@ -171,17 +181,17 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     // Legacy auth cases (for backward compatibility)
     case 'SET_AUTHENTICATED':
-      return { 
-        ...state, 
+      return {
+        ...state,
         isAuthenticated: action.payload,
-        auth: { ...state.auth, isAuthenticated: action.payload }
+        auth: { ...state.auth, isAuthenticated: action.payload },
       };
 
     case 'SET_USER_INFO':
-      return { 
-        ...state, 
+      return {
+        ...state,
         userInfo: action.payload,
-        auth: { ...state.auth, user: action.payload }
+        auth: { ...state.auth, user: action.payload },
       };
 
     default:
@@ -239,7 +249,7 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: 'SET_AUTHENTICATED', payload: isAuth });
   }, []);
 
-  const setUserInfo = useCallback((user: any) => {
+  const setUserInfo = useCallback((user: AuthState['user']) => {
     dispatch({ type: 'SET_USER_INFO', payload: user });
   }, []);
 
@@ -252,9 +262,12 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: 'SET_AUTH_ERROR', payload: error });
   }, []);
 
-  const setAuthSuccess = useCallback((user: AuthState['user'], token: string) => {
-    dispatch({ type: 'SET_AUTH_SUCCESS', payload: { user, token } });
-  }, []);
+  const setAuthSuccess = useCallback(
+    (user: AuthState['user'], token: string) => {
+      dispatch({ type: 'SET_AUTH_SUCCESS', payload: { user, token } });
+    },
+    []
+  );
 
   const clearAuth = useCallback(() => {
     dispatch({ type: 'CLEAR_AUTH' });
@@ -323,7 +336,7 @@ export function AppProvider({ children }: AppProviderProps) {
         console.error('Failed to initialize auth:', error);
       }
     };
-    
+
     initializeAuth();
   }, [refreshAuth]);
 
