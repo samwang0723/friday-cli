@@ -16,6 +16,7 @@ import {
   AuthState,
 } from '../types.js';
 import { getAuthStatus, getToken } from '../services/oauth.js';
+import { APP_ACTIONS } from '../utils/constants.js';
 
 // Initial state
 const initialState: AppState = {
@@ -60,28 +61,28 @@ type AppAction =
 // Reducer
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
-    case 'SET_MODE':
+    case APP_ACTIONS.SET_MODE:
       return { ...state, currentMode: action.payload };
 
-    case 'SWITCH_MODE':
+    case APP_ACTIONS.SWITCH_MODE:
       const currentIndex = modes.indexOf(state.currentMode);
       const nextIndex = (currentIndex + 1) % modes.length;
       return { ...state, currentMode: modes[nextIndex]! };
 
-    case 'ADD_MESSAGE':
+    case APP_ACTIONS.ADD_MESSAGE:
       const newHistory = [...state.chatHistory, action.payload];
       // Keep last 100 messages
       const trimmedHistory =
         newHistory.length > 100 ? newHistory.slice(-100) : newHistory;
       return { ...state, chatHistory: trimmedHistory };
 
-    case 'CLEAR_HISTORY':
+    case APP_ACTIONS.CLEAR_HISTORY:
       return { ...state, chatHistory: [] };
 
-    case 'SET_CURRENT_INPUT':
+    case APP_ACTIONS.SET_CURRENT_INPUT:
       return { ...state, currentInput: action.payload };
 
-    case 'ADD_TO_COMMAND_HISTORY':
+    case APP_ACTIONS.ADD_TO_COMMAND_HISTORY:
       const newCommandHistory = [...state.commandHistory, action.payload];
       // Keep last 50 commands
       const trimmedCommands =
@@ -94,7 +95,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         historyIndex: -1, // Reset index
       };
 
-    case 'NAVIGATE_HISTORY':
+    case APP_ACTIONS.NAVIGATE_HISTORY:
       if (action.payload === 'up' && state.commandHistory.length > 0) {
         const newIndex = Math.min(
           state.historyIndex + 1,
@@ -130,13 +131,13 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return state;
 
     // Enhanced auth cases
-    case 'SET_AUTH_LOADING':
+    case APP_ACTIONS.SET_AUTH_LOADING:
       return {
         ...state,
         auth: { ...state.auth, isLoading: action.payload, error: null },
       };
 
-    case 'SET_AUTH_ERROR':
+    case APP_ACTIONS.SET_AUTH_ERROR:
       return {
         ...state,
         auth: {
@@ -151,7 +152,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         userInfo: null,
       };
 
-    case 'SET_AUTH_SUCCESS':
+    case APP_ACTIONS.SET_AUTH_SUCCESS:
       return {
         ...state,
         auth: {
@@ -165,7 +166,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         userInfo: action.payload.user,
       };
 
-    case 'CLEAR_AUTH':
+    case APP_ACTIONS.CLEAR_AUTH:
       return {
         ...state,
         auth: {
@@ -180,14 +181,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     // Legacy auth cases (for backward compatibility)
-    case 'SET_AUTHENTICATED':
+    case APP_ACTIONS.SET_AUTHENTICATED:
       return {
         ...state,
         isAuthenticated: action.payload,
         auth: { ...state.auth, isAuthenticated: action.payload },
       };
 
-    case 'SET_USER_INFO':
+    case APP_ACTIONS.SET_USER_INFO:
       return {
         ...state,
         userInfo: action.payload,
@@ -218,59 +219,62 @@ export function AppProvider({ children }: AppProviderProps) {
 
   // Create stable action handlers using useCallback outside of useMemo
   const switchMode = useCallback(() => {
-    dispatch({ type: 'SWITCH_MODE' });
+    dispatch({ type: APP_ACTIONS.SWITCH_MODE });
   }, []);
 
   const setMode = useCallback((mode: Mode) => {
-    dispatch({ type: 'SET_MODE', payload: mode });
+    dispatch({ type: APP_ACTIONS.SET_MODE, payload: mode });
   }, []);
 
   const addMessage = useCallback((message: ChatMessage) => {
-    dispatch({ type: 'ADD_MESSAGE', payload: message });
+    dispatch({ type: APP_ACTIONS.ADD_MESSAGE, payload: message });
   }, []);
 
   const clearHistory = useCallback(() => {
-    dispatch({ type: 'CLEAR_HISTORY' });
+    dispatch({ type: APP_ACTIONS.CLEAR_HISTORY });
   }, []);
 
   const setCurrentInput = useCallback((input: string) => {
-    dispatch({ type: 'SET_CURRENT_INPUT', payload: input });
+    dispatch({ type: APP_ACTIONS.SET_CURRENT_INPUT, payload: input });
   }, []);
 
   const addToCommandHistory = useCallback((command: string) => {
-    dispatch({ type: 'ADD_TO_COMMAND_HISTORY', payload: command });
+    dispatch({ type: APP_ACTIONS.ADD_TO_COMMAND_HISTORY, payload: command });
   }, []);
 
   const navigateHistory = useCallback((direction: 'up' | 'down') => {
-    dispatch({ type: 'NAVIGATE_HISTORY', payload: direction });
+    dispatch({ type: APP_ACTIONS.NAVIGATE_HISTORY, payload: direction });
   }, []);
 
   const setAuthenticated = useCallback((isAuth: boolean) => {
-    dispatch({ type: 'SET_AUTHENTICATED', payload: isAuth });
+    dispatch({ type: APP_ACTIONS.SET_AUTHENTICATED, payload: isAuth });
   }, []);
 
   const setUserInfo = useCallback((user: AuthState['user']) => {
-    dispatch({ type: 'SET_USER_INFO', payload: user });
+    dispatch({ type: APP_ACTIONS.SET_USER_INFO, payload: user });
   }, []);
 
   // Enhanced auth action handlers
   const setAuthLoading = useCallback((loading: boolean) => {
-    dispatch({ type: 'SET_AUTH_LOADING', payload: loading });
+    dispatch({ type: APP_ACTIONS.SET_AUTH_LOADING, payload: loading });
   }, []);
 
   const setAuthError = useCallback((error: string | null) => {
-    dispatch({ type: 'SET_AUTH_ERROR', payload: error });
+    dispatch({ type: APP_ACTIONS.SET_AUTH_ERROR, payload: error });
   }, []);
 
   const setAuthSuccess = useCallback(
     (user: AuthState['user'], token: string) => {
-      dispatch({ type: 'SET_AUTH_SUCCESS', payload: { user, token } });
+      dispatch({
+        type: APP_ACTIONS.SET_AUTH_SUCCESS,
+        payload: { user, token },
+      });
     },
     []
   );
 
   const clearAuth = useCallback(() => {
-    dispatch({ type: 'CLEAR_AUTH' });
+    dispatch({ type: APP_ACTIONS.CLEAR_AUTH });
   }, []);
 
   const refreshAuth = useCallback(async () => {

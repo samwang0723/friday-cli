@@ -1,14 +1,3 @@
-// UI Constants
-export const UI_CONSTRAINTS = {
-  MAX_CHAT_HISTORY: 100,
-  MAX_COMMAND_HISTORY: 50,
-  MAX_INPUT_LINES: 3,
-  HEADER_LINES: 6,
-  STATUS_LINES: 1,
-  MARGIN_LINES: 2,
-  INPUT_LINES: 5,
-} as const;
-
 // OAuth Constants for AgentCore Integration
 export const OAUTH_CONFIG = {
   TOKEN_PATH: 'token.json',
@@ -24,12 +13,6 @@ export const OAUTH_CONFIG = {
   ] as string[],
 } as const;
 
-// Performance Constants
-export const PERFORMANCE = {
-  DEBOUNCE_RESIZE: 50,
-  PROCESSING_DELAY: 800,
-} as const;
-
 // Commands
 export const COMMANDS = {
   HELP: '/help',
@@ -37,4 +20,34 @@ export const COMMANDS = {
   LOGOUT: '/logout',
   AUTH: '/auth',
   EXIT: '/exit',
+} as const;
+
+export const MESSAGE_TYPE = {
+  USER: 'user',
+  SYSTEM: 'system',
+  ACTION: 'action',
+  AUTH: 'auth',
+} as const;
+
+export const ACTION_TYPE = {
+  DESCRIPTION: 'description',
+  FILE_UPDATE: 'file_update',
+  CODE_DIFF: 'code_diff',
+  NESTED: 'nested',
+} as const;
+
+export const APP_ACTIONS = {
+  SET_MODE: 'SET_MODE',
+  SWITCH_MODE: 'SWITCH_MODE',
+  ADD_MESSAGE: 'ADD_MESSAGE',
+  CLEAR_HISTORY: 'CLEAR_HISTORY',
+  SET_CURRENT_INPUT: 'SET_CURRENT_INPUT',
+  ADD_TO_COMMAND_HISTORY: 'ADD_TO_COMMAND_HISTORY',
+  NAVIGATE_HISTORY: 'NAVIGATE_HISTORY',
+  SET_AUTH_LOADING: 'SET_AUTH_LOADING',
+  SET_AUTH_ERROR: 'SET_AUTH_ERROR',
+  SET_AUTH_SUCCESS: 'SET_AUTH_SUCCESS',
+  CLEAR_AUTH: 'CLEAR_AUTH',
+  SET_AUTHENTICATED: 'SET_AUTHENTICATED',
+  SET_USER_INFO: 'SET_USER_INFO',
 } as const;
