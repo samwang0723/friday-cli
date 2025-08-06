@@ -3,6 +3,7 @@ import { Box, Text, useInput } from 'ink';
 import { useApp } from '../context/AppContext.js';
 import { ChatMessage, AuthMessage, AppActions, AuthState } from '../types.js';
 import { googleLogin, logout, getAuthStatus } from '../services/oauth.js';
+import { ACTION_TYPE, COMMANDS, MESSAGE_TYPE } from '../utils/constants.js';
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -30,7 +31,7 @@ export const InputBox = memo(function InputBox() {
         // Inline submit logic to avoid circular dependency
         const userMessage: ChatMessage = {
           id: generateId(),
-          type: 'user',
+          type: MESSAGE_TYPE.USER,
           content: currentInput,
           timestamp: new Date(),
         };
@@ -114,42 +115,42 @@ async function processMessage(
 ) {
   if (message.startsWith('/')) {
     switch (message.trim()) {
-      case '/help':
+      case COMMANDS.HELP:
         actions.addMessage({
           id: generateId(),
-          type: 'system',
+          type: MESSAGE_TYPE.SYSTEM,
           content: 'Available commands: /help, /login, /logout, /auth, /exit',
           timestamp: new Date(),
         });
         actions.addMessage({
           id: generateId(),
-          type: 'system',
+          type: MESSAGE_TYPE.SYSTEM,
           content: 'Features: Shift+Tab to switch modes, Up/Down for history',
           timestamp: new Date(),
         });
         actions.addMessage({
           id: generateId(),
-          type: 'system',
+          type: MESSAGE_TYPE.SYSTEM,
           content:
             '⚠️  Note: Make sure AgentCore backend is running for authentication',
           timestamp: new Date(),
         });
         break;
-      case '/exit':
+      case COMMANDS.EXIT:
         actions.addMessage({
           id: generateId(),
-          type: 'system',
+          type: MESSAGE_TYPE.SYSTEM,
           content: 'Goodbye from Friday! 👋',
           timestamp: new Date(),
         });
         process.exit(0);
-      case '/login':
+      case COMMANDS.LOGIN:
         // Set loading state
         actions.setAuthLoading(true);
 
         const loadingMessage: AuthMessage = {
           id: generateId(),
-          type: 'auth',
+          type: MESSAGE_TYPE.AUTH,
           authType: 'loading',
           content: '🌐 Starting AgentCore OAuth login...',
           timestamp: new Date(),
@@ -170,7 +171,7 @@ async function processMessage(
 
               const successMessage: AuthMessage = {
                 id: generateId(),
-                type: 'auth',
+                type: MESSAGE_TYPE.AUTH,
                 authType: 'success',
                 content: result.message,
                 timestamp: new Date(),
@@ -187,7 +188,7 @@ async function processMessage(
               // Success but no user data yet
               const partialSuccessMessage: AuthMessage = {
                 id: generateId(),
-                type: 'auth',
+                type: MESSAGE_TYPE.AUTH,
                 authType: 'success',
                 content: result.message,
                 timestamp: new Date(),
@@ -198,7 +199,7 @@ async function processMessage(
             actions.setAuthError(result.message);
             const errorMessage: AuthMessage = {
               id: generateId(),
-              type: 'auth',
+              type: MESSAGE_TYPE.AUTH,
               authType: 'error',
               content: result.message,
               timestamp: new Date(),
@@ -211,7 +212,7 @@ async function processMessage(
           actions.setAuthError(errorMsg);
           const errorMessage: AuthMessage = {
             id: generateId(),
-            type: 'auth',
+            type: MESSAGE_TYPE.AUTH,
             authType: 'error',
             content: errorMsg,
             timestamp: new Date(),
@@ -221,14 +222,14 @@ async function processMessage(
         }
         break;
 
-      case '/logout':
+      case COMMANDS.LOGOUT:
         try {
           const result = await logout();
           actions.clearAuth();
 
           const logoutMessage: AuthMessage = {
             id: generateId(),
-            type: 'auth',
+            type: MESSAGE_TYPE.AUTH,
             authType: 'success',
             content: result.message,
             timestamp: new Date(),
@@ -239,7 +240,7 @@ async function processMessage(
           actions.setAuthError(errorMsg);
           const errorMessage: AuthMessage = {
             id: generateId(),
-            type: 'auth',
+            type: MESSAGE_TYPE.AUTH,
             authType: 'error',
             content: errorMsg,
             timestamp: new Date(),
@@ -249,7 +250,7 @@ async function processMessage(
         }
         break;
 
-      case '/auth':
+      case COMMANDS.AUTH:
         const authStatus = getAuthStatus();
         let statusContent: string;
         let statusMetadata: AuthMessage['metadata'] = undefined;
@@ -272,7 +273,7 @@ async function processMessage(
 
         const statusMessage: AuthMessage = {
           id: generateId(),
-          type: 'auth',
+          type: MESSAGE_TYPE.AUTH,
           authType: 'status',
           content: statusContent,
           timestamp: new Date(),
@@ -283,7 +284,7 @@ async function processMessage(
       default:
         actions.addMessage({
           id: generateId(),
-          type: 'system',
+          type: MESSAGE_TYPE.SYSTEM,
           content: `❌ Unknown command: ${message}. Type /help for available commands.`,
           timestamp: new Date(),
         });
@@ -292,8 +293,8 @@ async function processMessage(
     // Handle different modes
     const actionMessage: ChatMessage = {
       id: generateId(),
-      type: 'action',
-      actionType: 'description',
+      type: MESSAGE_TYPE.ACTION,
+      actionType: ACTION_TYPE.DESCRIPTION,
       content: `Processing ${currentMode} message...`,
       timestamp: new Date(),
     };
@@ -307,8 +308,8 @@ async function processMessage(
         // Example file update message
         actions.addMessage({
           id: generateId(),
-          type: 'action',
-          actionType: 'file_update',
+          type: MESSAGE_TYPE.ACTION,
+          actionType: ACTION_TYPE.FILE_UPDATE,
           content: 'Update text processing logic',
           timestamp: new Date(),
           metadata: {
@@ -323,8 +324,8 @@ async function processMessage(
         // Example nested action
         actions.addMessage({
           id: generateId(),
-          type: 'action',
-          actionType: 'nested',
+          type: MESSAGE_TYPE.ACTION,
+          actionType: ACTION_TYPE.NESTED,
           content: 'Analyzing audio patterns',
           timestamp: new Date(),
         });
@@ -334,8 +335,8 @@ async function processMessage(
         // Example file update with code diff
         actions.addMessage({
           id: generateId(),
-          type: 'action',
-          actionType: 'file_update',
+          type: MESSAGE_TYPE.ACTION,
+          actionType: ACTION_TYPE.FILE_UPDATE,
           content: 'Enhanced reasoning algorithms',
           timestamp: new Date(),
           metadata: {
@@ -347,8 +348,8 @@ async function processMessage(
 
         actions.addMessage({
           id: generateId(),
-          type: 'action',
-          actionType: 'code_diff',
+          type: MESSAGE_TYPE.ACTION,
+          actionType: ACTION_TYPE.CODE_DIFF,
           content: '',
           timestamp: new Date(),
           metadata: {

@@ -4,6 +4,7 @@ import { AppProvider, useApp } from '../context/AppContext.js';
 import { ChatHistory } from './ChatHistory.js';
 import { InputBox } from './InputBox.js';
 import { StatusBar } from './StatusBar.js';
+import { MESSAGE_TYPE } from '../utils/constants.js';
 
 // Initialization component that doesn't re-render
 function AppInitializer() {
@@ -16,7 +17,7 @@ function AppInitializer() {
       initializedRef.current = true;
       actions.addMessage({
         id: `msg_${Date.now()}_init`,
-        type: 'system',
+        type: MESSAGE_TYPE.SYSTEM,
         content: 'Friday AI Assistant initialized. Type your message below.',
         timestamp: new Date(),
       });
@@ -50,7 +51,6 @@ const FridayApp = memo(function FridayApp() {
   return (
     <Box flexDirection="column" width={width} padding={2}>
       <AppInitializer />
-      {/* <Header /> */}
       <ChatHistory />
       <InputBox />
       <StatusBar />

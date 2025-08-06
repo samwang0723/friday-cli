@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { Box, Text } from 'ink';
 import { ChatMessage, ActionMessage } from '../types.js';
+import { ACTION_TYPE, MESSAGE_TYPE } from '../utils/constants.js';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -28,7 +29,7 @@ function DynamicMessage({ message }: { message: ActionMessage }) {
   const indicator = <Text color="blue">⏺ </Text>;
 
   switch (message.actionType) {
-    case 'description':
+    case ACTION_TYPE.DESCRIPTION:
       return (
         <Box marginTop={1}>
           {indicator}
@@ -36,13 +37,13 @@ function DynamicMessage({ message }: { message: ActionMessage }) {
         </Box>
       );
 
-    case 'file_update':
+    case ACTION_TYPE.FILE_UPDATE:
       return <FileUpdateMessage message={message} />;
 
-    case 'code_diff':
+    case ACTION_TYPE.CODE_DIFF:
       return <CodeDiffMessage message={message} />;
 
-    case 'nested':
+    case ACTION_TYPE.NESTED:
       return (
         <Box>
           <Text color="gray">⎿ </Text>
@@ -122,11 +123,11 @@ export const MessageItem = memo(function MessageItem({
   message,
 }: MessageItemProps) {
   switch (message.type) {
-    case 'user':
+    case MESSAGE_TYPE.USER:
       return <UserMessage message={message} />;
-    case 'system':
+    case MESSAGE_TYPE.SYSTEM:
       return <SystemMessage message={message} />;
-    case 'action':
+    case MESSAGE_TYPE.ACTION:
       return <DynamicMessage message={message as ActionMessage} />;
     default:
       return null;
