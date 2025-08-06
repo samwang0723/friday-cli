@@ -1,0 +1,73 @@
+export function startOAuthServer(port: number = 8080): Promise<string> {
+  return new Promise((resolve) => {
+    const server = Bun.serve({
+      port,
+      async fetch(req) {
+        const url = new URL(req.url);
+        if (url.pathname === "/callback" && url.searchParams.has("code")) {
+          const code = url.searchParams.get("code")!;
+          server.stop();
+          resolve(code);
+          const htmlContent = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Login Successful</title>
+                <link rel="preconnect" href="https://fonts.googleapis.com">
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+                <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600&display=swap" rel="stylesheet">
+                <style>
+                    body {
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        height: 100vh;
+                        margin: 0;
+                        background: #09051a;
+                        font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+                        color: #fff;
+                        text-align: center;
+                    }
+                    .container {
+                        background: rgba(255, 255, 255, 0.1);
+                        padding: 3rem 4rem;
+                        border-radius: 1rem;
+                        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+                        backdrop-filter: blur(10px);
+                        -webkit-backdrop-filter: blur(10px);
+                        border: 1px solid rgba(255, 255, 255, 0.18);
+                    }
+                    h1 {
+                        font-size: 2.0rem;
+                        margin-bottom: 1rem;
+                        font-weight: 500;
+                    }
+                    p {
+                        font-size: 1.05rem;
+                        font-weight: 300;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <h1>Authentication Successful</h1>
+                    <p>Your login with AgentCore has been completed successfully.</p>
+                    <p>You may now close this window and return to the console.</p>
+                </div>
+            </body>
+            </html>
+          `;
+          return new Response(htmlContent, {
+            headers: { "Content-Type": "text/html" }
+          });
+        }
+        return new Response("Not found", { status: 404 });
+      }
+    });
+    console.log(
+      `OAuth callback server listening on http://localhost:${port}/callback`
+    );
+  });
+}
