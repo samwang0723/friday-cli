@@ -1,10 +1,12 @@
-import React, { useEffect, useRef, memo, useState } from 'react';
-import { Box, useStdout } from 'ink';
+import React, { useEffect, useRef, memo } from 'react';
+import { Box } from 'ink';
 import { AppProvider, useApp } from '../context/AppContext.js';
 import { ChatHistory } from './ChatHistory.js';
 import { InputBox } from './InputBox.js';
 import { StatusBar } from './StatusBar.js';
 import { MESSAGE_TYPE } from '../utils/constants.js';
+import VoiceRecorder from './VoiceRecorder.js';
+import { useScreenSize } from '../hooks/useScreenSize.js';
 
 // Initialization component that doesn't re-render
 function AppInitializer() {
@@ -27,31 +29,17 @@ function AppInitializer() {
   return null; // This component only handles side effects
 }
 
-// Hook for screen size
-function useScreenSize() {
-  const { stdout } = useStdout();
-  const getSize = () => ({ height: stdout.rows, width: stdout.columns });
-  const [size, setSize] = useState(getSize);
-
-  useEffect(() => {
-    const onResize = () => setSize(getSize());
-    stdout.on('resize', onResize);
-    return () => {
-      stdout.off('resize', onResize);
-    };
-  }, [stdout]);
-
-  return size;
-}
 
 // Main UI component that doesn't need context
 const FridayApp = memo(function FridayApp() {
   const { width } = useScreenSize(); // Get terminal width only
+  const { state } = useApp();
 
   return (
     <Box flexDirection="column" width={width} padding={2}>
       <AppInitializer />
       <ChatHistory />
+      {state.currentMode === 'voice' && <VoiceRecorder />}
       <InputBox />
       <StatusBar />
     </Box>

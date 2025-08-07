@@ -4,6 +4,7 @@ export interface BaseMessage {
   id: string;
   timestamp: Date;
   content: string;
+  color?: string;
 }
 
 export interface SimpleMessage extends BaseMessage {
@@ -44,7 +45,26 @@ export interface AuthMessage extends BaseMessage {
   };
 }
 
-export type ChatMessage = SimpleMessage | ActionMessage | AuthMessage;
+export interface StreamingMessage extends BaseMessage {
+  type: 'streaming';
+  streamingType: 'thinking' | 'response' | 'connection';
+  partialContent: string;
+  isComplete?: boolean;
+  canStop?: boolean;
+  connectionId?: string;
+}
+
+export type ConnectionStatus = 'connecting' | 'connected' | 'streaming' | 'stopped' | 'error' | 'disconnected';
+
+export interface StreamingSession {
+  id: string;
+  type: 'thinking' | 'response' | 'connection';
+  messageId: string;
+  abortController?: AbortController;
+  startTime: Date;
+}
+
+export type ChatMessage = SimpleMessage | ActionMessage | AuthMessage | StreamingMessage;
 
 export interface UserInfo {
   id: string;
@@ -69,6 +89,14 @@ export interface AppState {
   chatHistory: ChatMessage[];
   currentInput: string;
 
+  // Streaming State
+  streaming: {
+    activeStreams: Map<string, StreamingSession>;
+    connectionStatus: ConnectionStatus;
+    canStop: boolean;
+    isInitialized: boolean;
+  };
+
   // Command History
   commandHistory: string[];
   historyIndex: number;
@@ -87,7 +115,7 @@ export interface AppActions {
   setMode: (mode: Mode) => void;
 
   // Chat Management
-  addMessage: (message: ChatMessage) => void;
+  addMessage: (message: ChatMessage, color?: string) => void;
   clearHistory: () => void;
 
   // Input Management
@@ -101,6 +129,15 @@ export interface AppActions {
   setAuthSuccess: (user: AuthState['user'], token: string) => void;
   clearAuth: () => void;
   refreshAuth: () => Promise<void>;
+
+  // Streaming Management
+  startStreaming: (type: 'thinking' | 'response' | 'connection', messageId: string) => void;
+  updateStreamingContent: (messageId: string, partialContent: string) => void;
+  completeStreaming: (messageId: string, finalContent?: string) => void;
+  stopStreaming: (messageId: string) => void;
+  removeStreamingMessages: (messageIds: string[]) => void;
+  setConnectionStatus: (status: ConnectionStatus) => void;
+  initializeChat: () => Promise<void>;
 
   // Legacy Auth Management (for backward compatibility)
   setAuthenticated: (isAuth: boolean) => void;

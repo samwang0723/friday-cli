@@ -1,7 +1,7 @@
 import React, { useMemo, memo } from 'react';
 import { Box } from 'ink';
 import { useApp } from '../context/AppContext.js';
-import { MessageItem } from './MessageItem.js';
+import { MessageItem } from './messages/index.js';
 
 export const ChatHistory = memo(function ChatHistory() {
   const { state } = useApp();
@@ -20,7 +20,7 @@ export const ChatHistory = memo(function ChatHistory() {
   );
 
   return (
-    <Box flexDirection="column" marginY={1}>
+    <Box flexDirection="column" marginY={1} width="60%">
       {messageElements}
     </Box>
   );
