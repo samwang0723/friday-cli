@@ -5,6 +5,7 @@ import { ChatHistory } from './ChatHistory.js';
 import { InputBox } from './InputBox.js';
 import { StatusBar } from './StatusBar.js';
 import { MESSAGE_TYPE } from '../utils/constants.js';
+import VoiceRecorder from './VoiceRecorder.js';
 
 // Initialization component that doesn't re-render
 function AppInitializer() {
@@ -52,6 +53,7 @@ const FridayApp = memo(function FridayApp() {
     <Box flexDirection="column" width={width} padding={2}>
       <AppInitializer />
       <ChatHistory />
+      <VoiceRecorder />
       <InputBox />
       <StatusBar />
     </Box>
