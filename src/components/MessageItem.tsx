@@ -1,7 +1,8 @@
 import React, { memo } from 'react';
 import { Box, Text } from 'ink';
-import { ChatMessage, ActionMessage } from '../types.js';
+import { ChatMessage, ActionMessage, StreamingMessage } from '../types.js';
 import { ACTION_TYPE, MESSAGE_TYPE } from '../utils/constants.js';
+import { StreamingMessageComponent } from './StreamingMessage.js';
 
 interface MessageItemProps {
   message: ChatMessage;
@@ -19,14 +20,14 @@ function UserMessage({ message }: { message: ChatMessage }) {
 function SystemMessage({ message }: { message: ChatMessage }) {
   return (
     <Box marginTop={1}>
-      <Text color="magentaBright">⏺ </Text>
+      <Text color="magentaBright">⏺</Text>
       <Text color="magentaBright">{message.content}</Text>
     </Box>
   );
 }
 
 function DynamicMessage({ message }: { message: ActionMessage }) {
-  const indicator = <Text color="blue">⏺ </Text>;
+  const indicator = <Text color="blue">⏺</Text>;
 
   switch (message.actionType) {
     case ACTION_TYPE.DESCRIPTION:
@@ -62,7 +63,7 @@ function DynamicMessage({ message }: { message: ActionMessage }) {
 }
 
 function FileUpdateMessage({ message }: { message: ActionMessage }) {
-  const indicator = <Text color="blue">⏺ </Text>;
+  const indicator = <Text color="blue">⏺</Text>;
   const tree = <Text color="gray">⎿ </Text>;
   const { filePath, additions = 0, removals = 0 } = message.metadata || {};
 
@@ -129,6 +130,10 @@ export const MessageItem = memo(function MessageItem({
       return <SystemMessage message={message} />;
     case MESSAGE_TYPE.ACTION:
       return <DynamicMessage message={message as ActionMessage} />;
+    case 'streaming':
+      return (
+        <StreamingMessageComponent message={message as StreamingMessage} />
+      );
     default:
       return null;
   }

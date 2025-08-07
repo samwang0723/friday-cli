@@ -44,7 +44,26 @@ export interface AuthMessage extends BaseMessage {
   };
 }
 
-export type ChatMessage = SimpleMessage | ActionMessage | AuthMessage;
+export interface StreamingMessage extends BaseMessage {
+  type: 'streaming';
+  streamingType: 'thinking' | 'response' | 'connection';
+  partialContent: string;
+  isComplete?: boolean;
+  canStop?: boolean;
+  connectionId?: string;
+}
+
+export type ConnectionStatus = 'connecting' | 'connected' | 'streaming' | 'stopped' | 'error' | 'disconnected';
+
+export interface StreamingSession {
+  id: string;
+  type: 'thinking' | 'response' | 'connection';
+  messageId: string;
+  abortController?: AbortController;
+  startTime: Date;
+}
+
+export type ChatMessage = SimpleMessage | ActionMessage | AuthMessage | StreamingMessage;
 
 export interface UserInfo {
   id: string;
@@ -68,6 +87,14 @@ export interface AppState {
   // Chat State
   chatHistory: ChatMessage[];
   currentInput: string;
+
+  // Streaming State
+  streaming: {
+    activeStreams: Map<string, StreamingSession>;
+    connectionStatus: ConnectionStatus;
+    canStop: boolean;
+    isInitialized: boolean;
+  };
 
   // Command History
   commandHistory: string[];
@@ -101,6 +128,14 @@ export interface AppActions {
   setAuthSuccess: (user: AuthState['user'], token: string) => void;
   clearAuth: () => void;
   refreshAuth: () => Promise<void>;
+
+  // Streaming Management
+  startStreaming: (type: 'thinking' | 'response' | 'connection', messageId: string) => void;
+  updateStreamingContent: (messageId: string, partialContent: string) => void;
+  completeStreaming: (messageId: string, finalContent?: string) => void;
+  stopStreaming: (messageId: string) => void;
+  setConnectionStatus: (status: ConnectionStatus) => void;
+  initializeChat: () => Promise<void>;
 
   // Legacy Auth Management (for backward compatibility)
   setAuthenticated: (isAuth: boolean) => void;

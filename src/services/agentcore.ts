@@ -65,13 +65,15 @@ function mapToAgentCoreLocale(locale?: string): AgentCoreLocale | undefined {
 }
 
 export class AgentCoreService {
+  private static readonly DEFAULT_STREAM_TIMEOUT = 30000; // 30 seconds
+
   private baseURL: string;
   private streamTimeout: number;
   private onLogout?: () => void;
 
   constructor(baseURL: string, onLogout?: () => void) {
     this.baseURL = baseURL;
-    this.streamTimeout = 30000; // 30 seconds
+    this.streamTimeout = AgentCoreService.DEFAULT_STREAM_TIMEOUT;
     this.onLogout = onLogout;
     console.info(
       `Initialized AgentCore service with base URL: ${this.baseURL}`
@@ -226,6 +228,48 @@ export class AgentCoreService {
     }
   }
 
+  async chatInit(
+    token: string,
+    onStatusUpdate: (status: string) => void,
+    context?: ClientContext
+  ): Promise<void> {
+    try {
+      onStatusUpdate('⏺ Connecting to AgentCore...');
+      console.info('Initializing agentCore chat session with status updates');
+
+      // First check health
+      try {
+        await this.healthCheck(context);
+        onStatusUpdate('⏺Server reachable, establishing session...');
+      } catch {
+        onStatusUpdate(
+          '⏺ Server health check failed, attempting connection anyway...'
+        );
+      }
+
+      const response = await fetch(`${this.baseURL}/chat/init`, {
+        method: 'POST',
+        headers: this.getHeaders(
+          token,
+          context?.timezone,
+          context?.clientDatetime,
+          context?.locale
+        ),
+        body: JSON.stringify({}),
+      });
+
+      await this.handleResponse(response);
+      onStatusUpdate('⏺ Connected to AgentCore successfully');
+      console.info(
+        'AgentCore chat session initialized successfully with status updates'
+      );
+    } catch (error) {
+      console.error('Failed to initialize agentCore chat:', error);
+      onStatusUpdate('⏺ Failed to connect to AgentCore');
+      throw error;
+    }
+  }
+
   async *chatStream(
     message: string,
     token: string,
@@ -332,10 +376,10 @@ export class AgentCoreService {
 
             if (!eventType && data) {
               try {
-                const parsed = JSON.parse(data);
-                eventType = parsed.type;
+                const parsed = JSON.parse(data) as { type?: string };
+                eventType = parsed.type || '';
               } catch (parseError) {
-                console.log(
+                console.warn(
                   'Could not parse data to extract type:',
                   parseError
                 );

@@ -14,15 +14,24 @@ import {
   Mode,
   modes,
   AuthState,
+  ConnectionStatus,
+  StreamingSession,
 } from '../types.js';
 import { getAuthStatus, getToken } from '../services/oauth.js';
-import { APP_ACTIONS } from '../utils/constants.js';
+import { APP_ACTIONS, OAUTH_CONFIG } from '../utils/constants.js';
+import { AgentCoreService } from '../services/agentcore.js';
 
 // Initial state
 const initialState: AppState = {
   currentMode: 'text',
   chatHistory: [],
   currentInput: '',
+  streaming: {
+    activeStreams: new Map(),
+    connectionStatus: 'disconnected',
+    canStop: false,
+    isInitialized: false,
+  },
   commandHistory: [],
   historyIndex: -1,
   auth: {
@@ -46,6 +55,25 @@ type AppAction =
   | { type: 'SET_CURRENT_INPUT'; payload: string }
   | { type: 'ADD_TO_COMMAND_HISTORY'; payload: string }
   | { type: 'NAVIGATE_HISTORY'; payload: 'up' | 'down' }
+  // Streaming actions
+  | {
+      type: 'START_STREAMING';
+      payload: {
+        type: 'thinking' | 'response' | 'connection';
+        messageId: string;
+      };
+    }
+  | {
+      type: 'UPDATE_STREAMING_CONTENT';
+      payload: { messageId: string; partialContent: string };
+    }
+  | {
+      type: 'COMPLETE_STREAMING';
+      payload: { messageId: string; finalContent?: string };
+    }
+  | { type: 'STOP_STREAMING'; payload: { messageId: string } }
+  | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
+  | { type: 'INITIALIZE_CHAT_COMPLETE'; payload: boolean }
   // Enhanced auth actions
   | { type: 'SET_AUTH_LOADING'; payload: boolean }
   | { type: 'SET_AUTH_ERROR'; payload: string | null }
@@ -129,6 +157,130 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }
       }
       return state;
+
+    // Streaming cases
+    case 'START_STREAMING': {
+      const { type, messageId } = action.payload;
+      const newActiveStreams = new Map(state.streaming.activeStreams);
+      const streamingSession: StreamingSession = {
+        id: crypto.randomUUID(),
+        type,
+        messageId,
+        startTime: new Date(),
+      };
+      newActiveStreams.set(messageId, streamingSession);
+
+      return {
+        ...state,
+        streaming: {
+          ...state.streaming,
+          activeStreams: newActiveStreams,
+          canStop: true,
+        },
+      };
+    }
+
+    case 'UPDATE_STREAMING_CONTENT': {
+      const { messageId, partialContent } = action.payload;
+      const updatedHistory = state.chatHistory.map(msg => {
+        if (msg.id === messageId && msg.type === 'streaming') {
+          return {
+            ...msg,
+            partialContent,
+            content: partialContent, // For backward compatibility
+          };
+        }
+        return msg;
+      });
+
+      return {
+        ...state,
+        chatHistory: updatedHistory,
+      };
+    }
+
+    case 'COMPLETE_STREAMING': {
+      const { messageId, finalContent } = action.payload;
+      const newActiveStreams = new Map(state.streaming.activeStreams);
+      newActiveStreams.delete(messageId);
+
+      const updatedHistory = state.chatHistory.map(msg => {
+        if (msg.id === messageId && msg.type === 'streaming') {
+          return {
+            ...msg,
+            partialContent: finalContent || msg.partialContent,
+            content: finalContent || msg.partialContent,
+            isComplete: true,
+            canStop: false,
+          };
+        }
+        return msg;
+      });
+
+      return {
+        ...state,
+        chatHistory: updatedHistory,
+        streaming: {
+          ...state.streaming,
+          activeStreams: newActiveStreams,
+          canStop: newActiveStreams.size > 0,
+        },
+      };
+    }
+
+    case 'STOP_STREAMING': {
+      const { messageId } = action.payload;
+      const newActiveStreams = new Map(state.streaming.activeStreams);
+      const session = newActiveStreams.get(messageId);
+
+      if (session?.abortController) {
+        session.abortController.abort();
+      }
+      newActiveStreams.delete(messageId);
+
+      const updatedHistory = state.chatHistory.map(msg => {
+        if (msg.id === messageId && msg.type === 'streaming') {
+          return {
+            ...msg,
+            isComplete: true,
+            canStop: false,
+            partialContent: msg.partialContent + ' [Stopped by user]',
+            content: msg.content + ' [Stopped by user]',
+          };
+        }
+        return msg;
+      });
+
+      return {
+        ...state,
+        chatHistory: updatedHistory,
+        streaming: {
+          ...state.streaming,
+          activeStreams: newActiveStreams,
+          canStop: newActiveStreams.size > 0,
+        },
+      };
+    }
+
+    case 'SET_CONNECTION_STATUS': {
+      return {
+        ...state,
+        streaming: {
+          ...state.streaming,
+          connectionStatus: action.payload,
+        },
+      };
+    }
+
+    case 'INITIALIZE_CHAT_COMPLETE': {
+      return {
+        ...state,
+        streaming: {
+          ...state.streaming,
+          isInitialized: action.payload,
+        },
+      };
+    }
 
     // Enhanced auth cases
     case APP_ACTIONS.SET_AUTH_LOADING:
@@ -294,6 +446,133 @@ export function AppProvider({ children }: AppProviderProps) {
     }
   }, [setAuthSuccess, clearAuth, setAuthError]);
 
+  // Streaming action handlers
+  const startStreaming = useCallback(
+    (type: 'thinking' | 'response' | 'connection', messageId: string) => {
+      dispatch({ type: 'START_STREAMING', payload: { type, messageId } });
+    },
+    []
+  );
+
+  const updateStreamingContent = useCallback(
+    (messageId: string, partialContent: string) => {
+      dispatch({
+        type: 'UPDATE_STREAMING_CONTENT',
+        payload: { messageId, partialContent },
+      });
+    },
+    []
+  );
+
+  const completeStreaming = useCallback(
+    (messageId: string, finalContent?: string) => {
+      dispatch({
+        type: 'COMPLETE_STREAMING',
+        payload: { messageId, finalContent },
+      });
+    },
+    []
+  );
+
+  const stopStreaming = useCallback((messageId: string) => {
+    dispatch({ type: 'STOP_STREAMING', payload: { messageId } });
+  }, []);
+
+  const setConnectionStatus = useCallback((status: ConnectionStatus) => {
+    dispatch({ type: 'SET_CONNECTION_STATUS', payload: status });
+  }, []);
+
+  const initializeChat = useCallback(async () => {
+    if (
+      state.streaming.isInitialized ||
+      !state.auth.isAuthenticated ||
+      !state.auth.token
+    ) {
+      return;
+    }
+
+    try {
+      // Create AgentCore service instance
+      const agentCore = new AgentCoreService(OAUTH_CONFIG.AGENT_CORE_BASE_URL);
+
+      // Create a connection status message
+      const connectionMessageId = `connection_${Date.now()}`;
+      const connectionMessage: ChatMessage = {
+        id: connectionMessageId,
+        type: 'streaming',
+        streamingType: 'connection',
+        content: '',
+        partialContent: 'Connecting to AgentCore...',
+        timestamp: new Date(),
+        canStop: false,
+        isComplete: false,
+      };
+
+      addMessage(connectionMessage);
+      startStreaming('connection', connectionMessageId);
+      setConnectionStatus('connecting');
+
+      // Call chatInit with status callback
+      await agentCore.chatInit(
+        state.auth.token,
+        (status: string) => {
+          updateStreamingContent(connectionMessageId, status);
+        },
+        {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          clientDatetime: new Date().toISOString(),
+          locale: process.env.LANG?.split('.')[0]?.replace('_', '-') || 'en',
+        }
+      );
+
+      // Mark initialization as complete
+      completeStreaming(
+        connectionMessageId,
+        'Connected to AgentCore successfully'
+      );
+      setConnectionStatus('connected');
+
+      // Mark as initialized by updating the streaming state
+      // const newActiveStreams = new Map(state.streaming.activeStreams);
+      dispatch({
+        type: 'SET_CONNECTION_STATUS',
+        payload: 'connected',
+      });
+
+      // Use a custom action to mark as initialized
+      dispatch({
+        type: 'INITIALIZE_CHAT_COMPLETE',
+        payload: true,
+      });
+    } catch (error) {
+      console.error('Failed to initialize chat:', error);
+      setConnectionStatus('error');
+
+      // Show error message
+      const errorMessage: ChatMessage = {
+        id: `error_${Date.now()}`,
+        type: 'streaming',
+        streamingType: 'connection',
+        content: `Failed to connect to AgentCore: ${(error as Error).message}`,
+        partialContent: `Failed to connect to AgentCore: ${(error as Error).message}`,
+        timestamp: new Date(),
+        canStop: false,
+        isComplete: true,
+      };
+
+      addMessage(errorMessage);
+    }
+  }, [
+    state.streaming.isInitialized,
+    state.auth.isAuthenticated,
+    state.auth.token,
+    addMessage,
+    startStreaming,
+    updateStreamingContent,
+    completeStreaming,
+    setConnectionStatus,
+  ]);
+
   const actions: AppActions = useMemo(
     () => ({
       switchMode,
@@ -309,6 +588,13 @@ export function AppProvider({ children }: AppProviderProps) {
       setAuthSuccess,
       clearAuth,
       refreshAuth,
+      // Streaming actions
+      startStreaming,
+      updateStreamingContent,
+      completeStreaming,
+      stopStreaming,
+      setConnectionStatus,
+      initializeChat,
       // Legacy auth actions
       setAuthenticated,
       setUserInfo,
@@ -326,6 +612,12 @@ export function AppProvider({ children }: AppProviderProps) {
       setAuthSuccess,
       clearAuth,
       refreshAuth,
+      startStreaming,
+      updateStreamingContent,
+      completeStreaming,
+      stopStreaming,
+      setConnectionStatus,
+      initializeChat,
       setAuthenticated,
       setUserInfo,
     ]
@@ -343,6 +635,23 @@ export function AppProvider({ children }: AppProviderProps) {
 
     initializeAuth();
   }, [refreshAuth]);
+
+  // Auto-initialize chat when authentication becomes successful
+  useEffect(() => {
+    if (
+      state.auth.isAuthenticated &&
+      state.auth.token &&
+      !state.streaming.isInitialized
+    ) {
+      console.info('Authentication successful, initializing chat...');
+      initializeChat();
+    }
+  }, [
+    state.auth.isAuthenticated,
+    state.auth.token,
+    state.streaming.isInitialized,
+    initializeChat,
+  ]);
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({ state, actions }), [state, actions]);

@@ -1,9 +1,11 @@
 import React, { useCallback, useMemo, memo } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useApp } from '../context/AppContext.js';
-import { ChatMessage, AuthMessage, AppActions, AuthState } from '../types.js';
+import { ChatMessage, AuthMessage, AppActions, AuthState, StreamingMessage } from '../types.js';
 import { googleLogin, logout, getAuthStatus } from '../services/oauth.js';
-import { ACTION_TYPE, COMMANDS, MESSAGE_TYPE } from '../utils/constants.js';
+import { ACTION_TYPE, COMMANDS, MESSAGE_TYPE, OAUTH_CONFIG } from '../utils/constants.js';
+import { AgentCoreService } from '../services/agentcore.js';
+import { useStreamingSession } from '../hooks/useStreamingSession.js';
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -12,6 +14,7 @@ function generateId(): string {
 export const InputBox = memo(function InputBox() {
   const { state, actions } = useApp();
   const { currentInput, currentMode } = state;
+  const { startStream, stopAllStreams, getActiveStreamIds, isStreaming } = useStreamingSession();
 
   // Keyboard handler that uses state directly instead of refs
   const handleKeyInput = useCallback(
@@ -37,7 +40,7 @@ export const InputBox = memo(function InputBox() {
         };
         actions.addMessage(userMessage);
         actions.addToCommandHistory(currentInput);
-        processMessage(currentInput, actions, currentMode);
+        processMessage(currentInput, actions, currentMode, { startStream, stopAllStreams, getActiveStreamIds, isStreaming });
         actions.setCurrentInput('');
         return;
       }
@@ -111,7 +114,13 @@ export const InputBox = memo(function InputBox() {
 async function processMessage(
   message: string,
   actions: AppActions,
-  currentMode: string
+  currentMode: string,
+  streamingHook: {
+    startStream: (message: string, mode: any) => Promise<string | null>;
+    stopAllStreams: () => void;
+    getActiveStreamIds: () => string[];
+    isStreaming: (messageId?: string) => boolean;
+  }
 ) {
   if (message.startsWith('/')) {
     switch (message.trim()) {
@@ -119,7 +128,7 @@ async function processMessage(
         actions.addMessage({
           id: generateId(),
           type: MESSAGE_TYPE.SYSTEM,
-          content: 'Available commands: /help, /login, /logout, /auth, /exit',
+          content: 'Available commands: /help, /login, /logout, /auth, /stop, /exit',
           timestamp: new Date(),
         });
         actions.addMessage({
@@ -281,6 +290,25 @@ async function processMessage(
         };
         actions.addMessage(statusMessage);
         break;
+      case COMMANDS.STOP:
+        const activeStreamIds = streamingHook.getActiveStreamIds();
+        if (activeStreamIds.length > 0) {
+          streamingHook.stopAllStreams();
+          actions.addMessage({
+            id: generateId(),
+            type: MESSAGE_TYPE.SYSTEM,
+            content: `⏹️ Stopped ${activeStreamIds.length} active stream${activeStreamIds.length > 1 ? 's' : ''}`,
+            timestamp: new Date(),
+          });
+        } else {
+          actions.addMessage({
+            id: generateId(),
+            type: MESSAGE_TYPE.SYSTEM,
+            content: '⏹️ No active streams to stop',
+            timestamp: new Date(),
+          });
+        }
+        break;
       default:
         actions.addMessage({
           id: generateId(),
@@ -290,95 +318,7 @@ async function processMessage(
         });
     }
   } else {
-    // Handle different modes
-    const actionMessage: ChatMessage = {
-      id: generateId(),
-      type: MESSAGE_TYPE.ACTION,
-      actionType: ACTION_TYPE.DESCRIPTION,
-      content: `Processing ${currentMode} message...`,
-      timestamp: new Date(),
-    };
-    actions.addMessage(actionMessage);
-
-    // Simulate processing time
-    await new Promise(resolve => setTimeout(resolve, 800));
-
-    switch (currentMode) {
-      case 'text':
-        // Example file update message
-        actions.addMessage({
-          id: generateId(),
-          type: MESSAGE_TYPE.ACTION,
-          actionType: ACTION_TYPE.FILE_UPDATE,
-          content: 'Update text processing logic',
-          timestamp: new Date(),
-          metadata: {
-            filePath: 'src/handlers/text.ts',
-            additions: 3,
-            removals: 1,
-          },
-        });
-        break;
-
-      case 'voice':
-        // Example nested action
-        actions.addMessage({
-          id: generateId(),
-          type: MESSAGE_TYPE.ACTION,
-          actionType: ACTION_TYPE.NESTED,
-          content: 'Analyzing audio patterns',
-          timestamp: new Date(),
-        });
-        break;
-
-      case 'thinking':
-        // Example file update with code diff
-        actions.addMessage({
-          id: generateId(),
-          type: MESSAGE_TYPE.ACTION,
-          actionType: ACTION_TYPE.FILE_UPDATE,
-          content: 'Enhanced reasoning algorithms',
-          timestamp: new Date(),
-          metadata: {
-            filePath: 'src/thinking.ts',
-            additions: 5,
-            removals: 2,
-          },
-        });
-
-        actions.addMessage({
-          id: generateId(),
-          type: MESSAGE_TYPE.ACTION,
-          actionType: ACTION_TYPE.CODE_DIFF,
-          content: '',
-          timestamp: new Date(),
-          metadata: {
-            diffLines: [
-              {
-                lineNumber: 42,
-                type: 'unchanged',
-                content: 'function analyzeMessage(input: string) {',
-              },
-              {
-                lineNumber: 43,
-                type: 'removed',
-                content: '  return basicAnalysis(input);',
-              },
-              {
-                lineNumber: 43,
-                type: 'added',
-                content: '  return deepAnalysis(input, context);',
-              },
-              {
-                lineNumber: 44,
-                type: 'added',
-                content: '  // Enhanced with contextual reasoning',
-              },
-              { lineNumber: 45, type: 'unchanged', content: '}' },
-            ],
-          },
-        });
-        break;
-    }
+    // Handle message processing with streaming hook
+    await streamingHook.startStream(message, currentMode);
   }
 }
