@@ -6,7 +6,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint src/**/*.{ts,tsx}",
-    "lint:fix": "eslint src/**/*.{ts,tsx} --fix"
+    "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
+    "postinstall": "node scripts/check-sox.js"
   },
   "bin": {
     "friday-cli": "./dist/index.js"
