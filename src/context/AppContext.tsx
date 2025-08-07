@@ -72,6 +72,7 @@ type AppAction =
       payload: { messageId: string; finalContent?: string };
     }
   | { type: 'STOP_STREAMING'; payload: { messageId: string } }
+  | { type: 'REMOVE_STREAMING_MESSAGES'; payload: string[] }
   | { type: 'SET_CONNECTION_STATUS'; payload: ConnectionStatus }
   | { type: 'INITIALIZE_CHAT_COMPLETE'; payload: boolean }
   // Enhanced auth actions
@@ -262,6 +263,33 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
     }
 
+    case 'REMOVE_STREAMING_MESSAGES': {
+      const messageIdsToRemove = action.payload;
+      const filteredHistory = state.chatHistory.filter(
+        msg => !(msg.type === 'streaming' && messageIdsToRemove.includes(msg.id))
+      );
+      
+      // Also clean up active streams
+      const newActiveStreams = new Map(state.streaming.activeStreams);
+      messageIdsToRemove.forEach(id => {
+        const session = newActiveStreams.get(id);
+        if (session?.abortController) {
+          session.abortController.abort();
+        }
+        newActiveStreams.delete(id);
+      });
+
+      return {
+        ...state,
+        chatHistory: filteredHistory,
+        streaming: {
+          ...state.streaming,
+          activeStreams: newActiveStreams,
+          canStop: newActiveStreams.size > 0,
+        },
+      };
+    }
+
     case 'SET_CONNECTION_STATUS': {
       return {
         ...state,
@@ -378,8 +406,9 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: APP_ACTIONS.SET_MODE, payload: mode });
   }, []);
 
-  const addMessage = useCallback((message: ChatMessage) => {
-    dispatch({ type: APP_ACTIONS.ADD_MESSAGE, payload: message });
+  const addMessage = useCallback((message: ChatMessage, color?: string) => {
+    const messageWithColor = color ? { ...message, color } : message;
+    dispatch({ type: APP_ACTIONS.ADD_MESSAGE, payload: messageWithColor });
   }, []);
 
   const clearHistory = useCallback(() => {
@@ -476,6 +505,10 @@ export function AppProvider({ children }: AppProviderProps) {
 
   const stopStreaming = useCallback((messageId: string) => {
     dispatch({ type: 'STOP_STREAMING', payload: { messageId } });
+  }, []);
+
+  const removeStreamingMessages = useCallback((messageIds: string[]) => {
+    dispatch({ type: 'REMOVE_STREAMING_MESSAGES', payload: messageIds });
   }, []);
 
   const setConnectionStatus = useCallback((status: ConnectionStatus) => {
@@ -593,6 +626,7 @@ export function AppProvider({ children }: AppProviderProps) {
       updateStreamingContent,
       completeStreaming,
       stopStreaming,
+      removeStreamingMessages,
       setConnectionStatus,
       initializeChat,
       // Legacy auth actions
@@ -616,6 +650,7 @@ export function AppProvider({ children }: AppProviderProps) {
       updateStreamingContent,
       completeStreaming,
       stopStreaming,
+      removeStreamingMessages,
       setConnectionStatus,
       initializeChat,
       setAuthenticated,
@@ -643,7 +678,7 @@ export function AppProvider({ children }: AppProviderProps) {
       state.auth.token &&
       !state.streaming.isInitialized
     ) {
-      console.info('Authentication successful, initializing chat...');
+      // console.info('Authentication successful, initializing chat...');
       initializeChat();
     }
   }, [

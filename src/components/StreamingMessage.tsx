@@ -81,7 +81,7 @@ export const StreamingMessageComponent = memo(
         {message.canStop && !message.isComplete && (
           <Box marginLeft={2}>
             <Text color="gray" dimColor>
-              Type /stop to cancel
+              Type ESC to cancel
             </Text>
           </Box>
         )}

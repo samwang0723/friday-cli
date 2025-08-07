@@ -20,7 +20,6 @@ export const COMMANDS = {
   LOGOUT: '/logout',
   AUTH: '/auth',
   EXIT: '/exit',
-  STOP: '/stop',
 } as const;
 
 export const MESSAGE_TYPE = {

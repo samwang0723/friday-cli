@@ -75,9 +75,9 @@ export class AgentCoreService {
     this.baseURL = baseURL;
     this.streamTimeout = AgentCoreService.DEFAULT_STREAM_TIMEOUT;
     this.onLogout = onLogout;
-    console.info(
-      `Initialized AgentCore service with base URL: ${this.baseURL}`
-    );
+    // console.info(
+    //   `Initialized AgentCore service with base URL: ${this.baseURL}`
+    // );
   }
 
   private getHeaders(
@@ -235,12 +235,12 @@ export class AgentCoreService {
   ): Promise<void> {
     try {
       onStatusUpdate('⏺ Connecting to AgentCore...');
-      console.info('Initializing agentCore chat session with status updates');
+      // console.info('Initializing agentCore chat session with status updates');
 
       // First check health
       try {
         await this.healthCheck(context);
-        onStatusUpdate('⏺Server reachable, establishing session...');
+        onStatusUpdate('⏺ Server reachable, establishing session...');
       } catch {
         onStatusUpdate(
           '⏺ Server health check failed, attempting connection anyway...'
@@ -260,9 +260,9 @@ export class AgentCoreService {
 
       await this.handleResponse(response);
       onStatusUpdate('⏺ Connected to AgentCore successfully');
-      console.info(
-        'AgentCore chat session initialized successfully with status updates'
-      );
+      // console.info(
+      //   'AgentCore chat session initialized successfully with status updates'
+      // );
     } catch (error) {
       console.error('Failed to initialize agentCore chat:', error);
       onStatusUpdate('⏺ Failed to connect to AgentCore');
@@ -277,26 +277,26 @@ export class AgentCoreService {
     externalAbort?: AbortSignal
   ): AsyncGenerator<SseStreamResponse> {
     try {
-      console.info('Starting agentCore chat stream');
+      // console.info('Starting agentCore chat stream');
 
       const controller = new AbortController();
       let timeoutId: NodeJS.Timeout | null = null;
 
       if (externalAbort) {
         if (externalAbort.aborted) {
-          console.info(
-            'External abort signal already triggered, cancelling stream'
-          );
+          // console.info(
+          //   'External abort signal already triggered, cancelling stream'
+          // );
           return;
         }
         externalAbort.addEventListener('abort', () => {
-          console.info('External abort signal received, cancelling stream');
+          // console.info('External abort signal received, cancelling stream');
           controller.abort();
         });
       }
 
       timeoutId = setTimeout(() => {
-        console.warn(`Stream timeout after ${this.streamTimeout}ms, aborting`);
+        // console.warn(`Stream timeout after ${this.streamTimeout}ms, aborting`);
         controller.abort();
       }, this.streamTimeout);
 
@@ -328,9 +328,9 @@ export class AgentCoreService {
 
       if (!response.ok) {
         if (response.status === 401) {
-          console.warn(
-            'Received 401 Unauthorized in stream - triggering logout'
-          );
+          // console.warn(
+          //   'Received 401 Unauthorized in stream - triggering logout'
+          // );
           this.onLogout?.();
         }
         await this.handleResponse(response);
@@ -463,15 +463,10 @@ export class AgentCoreService {
       const err = error as Error;
 
       if (err.name === 'AbortError') {
-        if (externalAbort?.aborted) {
-          console.info('Stream cancelled by external abort signal');
-        } else {
-          console.info('Stream cancelled due to timeout');
-        }
         return;
       }
 
-      console.error('AgentCore chat stream failed:', error);
+      // console.error('AgentCore chat stream failed:', error);
       throw error;
     }
   }
@@ -479,7 +474,7 @@ export class AgentCoreService {
   // Health Check
   async healthCheck(context?: ClientContext): Promise<{ status: string }> {
     try {
-      console.info('Performing agentCore health check');
+      // console.info('Performing agentCore health check');
 
       const response = await fetch(`${this.baseURL}/health`, {
         method: 'GET',

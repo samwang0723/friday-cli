@@ -53,7 +53,7 @@ export const StatusBar = memo(function StatusBar() {
         {canStop && connectionStatus === 'streaming' && (
           <Text color="gray" dimColor>
             {' '}
-            · /stop to cancel
+            · ESC to cancel
           </Text>
         )}
       </Box>
@@ -68,7 +68,7 @@ export const StatusBar = memo(function StatusBar() {
   const guidanceText = useMemo(() => {
     return currentMode === 'voice'
       ? '(Press SPACE to record · Press SPACE again to stop & play)'
-      : '(Shift+Tab: switch · Enter: send · Ctrl+C: exit)';
+      : '(shift+tab: switch · ctrl+c: exit)';
   }, [currentMode]);
 
   return (

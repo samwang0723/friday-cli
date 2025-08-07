@@ -4,6 +4,7 @@ export interface BaseMessage {
   id: string;
   timestamp: Date;
   content: string;
+  color?: string;
 }
 
 export interface SimpleMessage extends BaseMessage {
@@ -114,7 +115,7 @@ export interface AppActions {
   setMode: (mode: Mode) => void;
 
   // Chat Management
-  addMessage: (message: ChatMessage) => void;
+  addMessage: (message: ChatMessage, color?: string) => void;
   clearHistory: () => void;
 
   // Input Management
@@ -134,6 +135,7 @@ export interface AppActions {
   updateStreamingContent: (messageId: string, partialContent: string) => void;
   completeStreaming: (messageId: string, finalContent?: string) => void;
   stopStreaming: (messageId: string) => void;
+  removeStreamingMessages: (messageIds: string[]) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;
   initializeChat: () => Promise<void>;
 

@@ -34,7 +34,7 @@ export function useStreamingSession() {
       actions.addMessage({
         id: generateId(),
         type: MESSAGE_TYPE.SYSTEM,
-        content: `🚧 ${mode} mode streaming not yet implemented. Please switch to text or thinking mode.`,
+        content: `${mode} mode streaming not yet implemented. Please switch to text or thinking mode.`,
         timestamp: new Date(),
       });
       return null;
