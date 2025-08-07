@@ -118,9 +118,6 @@ const VoiceRecorder: React.FC = () => {
         Voice Recorder (SoX, Bun/Node CLI)
       </Text>
       <Text>Status: {status}</Text>
-      <Text color="gray">
-        Press SPACE to record • Press SPACE again to stop &amp; play
-      </Text>
       {isRecording && <Text color="red">● REC</Text>}
       {isPlaying && <Text color="green">● PLAY</Text>}
       {isError && <Text color="red">● ERROR</Text>}

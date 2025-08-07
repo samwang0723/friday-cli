@@ -30,7 +30,9 @@ export const StatusBar = memo(function StatusBar() {
         </Text>
         <Text color="gray">
           {' '}
-          (Shift+Tab: switch · Enter: send · Ctrl+C: exit)
+          {currentMode === 'voice'
+            ? '(Press SPACE to record · Press SPACE again to stop & play)'
+            : '(Shift+Tab: switch · Enter: send · Ctrl+C: exit)'}
         </Text>
       </Box>
       <Box>{getAuthDisplay()}</Box>

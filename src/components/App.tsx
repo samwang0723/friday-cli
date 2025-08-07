@@ -48,12 +48,13 @@ function useScreenSize() {
 // Main UI component that doesn't need context
 const FridayApp = memo(function FridayApp() {
   const { width } = useScreenSize(); // Get terminal width only
+  const { state } = useApp();
 
   return (
     <Box flexDirection="column" width={width} padding={2}>
       <AppInitializer />
       <ChatHistory />
-      <VoiceRecorder />
+      {state.currentMode === 'voice' && <VoiceRecorder />}
       <InputBox />
       <StatusBar />
     </Box>
