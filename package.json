@@ -7,7 +7,7 @@
     "format:check": "prettier --check .",
     "lint": "eslint src/**/*.{ts,tsx}",
     "lint:fix": "eslint src/**/*.{ts,tsx} --fix",
-    "postinstall": "node scripts/check-sox.js"
+    "postinstall": "node scripts/check-sox.js && patch-package"
   },
   "bin": {
     "friday-cli": "./dist/index.js"
@@ -28,19 +28,32 @@
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "globals": "^16.3.0",
+    "patch-package": "^8.0.0",
     "prettier": "^3.6.2",
     "react-devtools-core": "^6.1.5"
   },
   "peerDependencies": {
     "typescript": "^5"
   },
+  "bun": {
+    "patches": {
+      "marked-terminal@7.3.0": "./patches/marked-terminal@7.3.0.patch"
+    }
+  },
+  "trustedDependencies": [
+    "marked-terminal"
+  ],
   "dependencies": {
     "@inkjs/ui": "^2.0.0",
     "@types/react": "^18.3.3",
     "chalk": "^5.4.1",
+    "cli-highlight": "^2.1.11",
+    "dedent": "^1.6.0",
     "dotenv": "^17.2.1",
     "figures": "^6.1.0",
     "ink": "^5.2.0",
+    "marked": "^16.1.2",
+    "marked-terminal": "^7.3.0",
     "open": "^10.2.0",
     "react": "^18.3.1",
     "use-interval": "^1.4.0"

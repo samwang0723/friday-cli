@@ -1,10 +1,58 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Box, Text } from 'ink';
 import { StreamingMessage } from '../types.js';
+import { marked } from 'marked';
+import TerminalRenderer from 'marked-terminal';
+import { highlight } from 'cli-highlight';
 
 interface StreamingMessageProps {
   message: StreamingMessage;
 }
+
+// Configure marked with terminal renderer and proper syntax highlighting
+marked.setOptions({
+  renderer: new TerminalRenderer({
+    // Enable syntax highlighting
+    code: (code: string, language?: string) => {
+      try {
+        if (language) {
+          return highlight(code, { language, theme: 'github' });
+        }
+        return highlight(code, { theme: 'github' });
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      } catch (error) {
+        // Fallback to plain text if highlighting fails
+        return code;
+      }
+    },
+    // Fix blockquote rendering
+    blockquote: (quote: string) => `▐ ${quote}`,
+    // Fix heading rendering
+    heading: (text: string, level: number) => {
+      const prefix = '█'.repeat(level);
+      return `${prefix} ${text}`;
+    },
+    // // Fix list item rendering
+    // listitem: (text: string) => `• ${text}`,
+    // // Fix ordered list rendering with proper numbering
+    // list: (body: string, ordered: boolean) => {
+    //   if (ordered) {
+    //     const items = body.split('\n').filter(item => item.trim());
+    //     return (
+    //       items
+    //         .map((item, index) => item.replace(/^• /, `${index + 1}. `))
+    //         .join('\n') + '\n'
+    //     );
+    //   }
+    //   return body;
+    // },
+    // Fix bold and italic rendering
+    // strong: (text: string) => `\x1b[1m${text}\x1b[0m`,
+    // em: (text: string) => `\x1b[3m${text}\x1b[0m`,
+    // Fix paragraph rendering
+    // paragraph: (text: string) => `${text}\n`,
+  }),
+});
 
 export const StreamingMessageComponent = memo(
   function StreamingMessageComponent({ message }: StreamingMessageProps) {
@@ -58,23 +106,28 @@ export const StreamingMessageComponent = memo(
         <Box>
           <Text color={color}>{indicator}</Text>
           <Box flexGrow={1}>
-            <Text>
-              {message.partialContent || message.content || (
-                <>
-                  <Text color={color}>{label}</Text>
-                  {!message.isComplete && (
-                    <Text color={color}>
-                      {dots}
-                      {spaces}
-                    </Text>
-                  )}
-                </>
-              )}
-              {!message.isComplete &&
-                (message.partialContent || message.content) && (
-                  <Text color="gray">▊</Text>
+            {message.partialContent || message.content ? (
+              <>
+                <Text>
+                  {
+                    marked(
+                      message.partialContent || message.content || ''
+                    ) as string
+                  }
+                </Text>
+                {!message.isComplete && <Text color="gray">▊</Text>}
+              </>
+            ) : (
+              <Text>
+                <Text color={color}>{label}</Text>
+                {!message.isComplete && (
+                  <Text color={color}>
+                    {dots}
+                    {spaces}
+                  </Text>
                 )}
-            </Text>
+              </Text>
+            )}
           </Box>
         </Box>
 
