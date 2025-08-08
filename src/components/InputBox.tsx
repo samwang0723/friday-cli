@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, memo, useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useApp } from '../context/AppContext.js';
 import { ChatMessage, ActionMessage } from '../types.js';
+import { useCommandNavigation } from '../hooks/useCommandNavigation.js';
 import { MESSAGE_TYPE, ACTION_TYPE } from '../utils/constants.js';
 import { useStreamingSession } from '../hooks/useStreamingSession.js';
 import { useCommandProcessor } from '../hooks/useCommandProcessor.js';
@@ -29,7 +30,7 @@ function normalizePastedText(raw: string): string {
 
 export const InputBox = memo(function InputBox() {
   const { state, actions } = useApp();
-  const { currentInput, currentMode } = state;
+  const { currentInput, currentMode, isCommandMode } = state;
   const { startStream, stopAllStreams, getActiveStreamIds, isStreaming } =
     useStreamingSession();
 
@@ -39,6 +40,8 @@ export const InputBox = memo(function InputBox() {
     getActiveStreamIds,
     isStreaming,
   });
+
+  const { navigateCommandList, getSelectedCommand } = useCommandNavigation();
 
   // Cursor position within currentInput (in characters)
   const [cursorIndex, setCursorIndex] = useState<number>(
@@ -79,16 +82,28 @@ export const InputBox = memo(function InputBox() {
       if (key.return) {
         if (!currentInput.trim()) return;
 
+        // If in command mode, use selected command
+        let commandToExecute = currentInput;
+        if (isCommandMode) {
+          const selectedCommand = getSelectedCommand();
+          if (selectedCommand) {
+            commandToExecute = selectedCommand.usage;
+            actions.setCurrentInput(selectedCommand.usage);
+          }
+          // Exit command mode after selection
+          actions.setCommandMode(false);
+        }
+
         // Inline submit logic to avoid circular dependency
         const userMessage: ChatMessage = {
           id: generateId(),
           type: MESSAGE_TYPE.USER,
-          content: currentInput,
+          content: commandToExecute,
           timestamp: new Date(),
         };
         actions.addMessage(userMessage);
-        actions.addToCommandHistory(currentInput);
-        processMessage(currentInput, currentMode);
+        actions.addToCommandHistory(commandToExecute);
+        processMessage(commandToExecute, currentMode);
         actions.setCurrentInput('');
         setCursorIndex(0);
         return;
@@ -100,14 +115,22 @@ export const InputBox = memo(function InputBox() {
       }
 
       if (key.upArrow) {
-        actions.navigateHistory('up');
-        setCursorIndex(Number.MAX_SAFE_INTEGER);
+        if (isCommandMode) {
+          navigateCommandList('up');
+        } else {
+          actions.navigateHistory('up');
+          setCursorIndex(Number.MAX_SAFE_INTEGER);
+        }
         return;
       }
 
       if (key.downArrow) {
-        actions.navigateHistory('down');
-        setCursorIndex(Number.MAX_SAFE_INTEGER);
+        if (isCommandMode) {
+          navigateCommandList('down');
+        } else {
+          actions.navigateHistory('down');
+          setCursorIndex(Number.MAX_SAFE_INTEGER);
+        }
         return;
       }
 
@@ -140,6 +163,14 @@ export const InputBox = memo(function InputBox() {
             currentInput.slice(0, index - 1) + currentInput.slice(index);
           actions.setCurrentInput(updated);
           setCursorIndex(index - 1);
+          
+          // Update command mode based on updated content
+          const startsWithSlash = updated.startsWith('/');
+          if (isCommandMode && !startsWithSlash) {
+            actions.setCommandMode(false);
+          } else if (isCommandMode && startsWithSlash) {
+            actions.setCommandQuery(updated);
+          }
         }
         return;
       }
@@ -161,8 +192,13 @@ export const InputBox = memo(function InputBox() {
         return;
       }
 
-      // Handle ESC key to stop all active streams
+      // Handle ESC key - exit command mode or stop streams
       if (key.escape) {
+        if (isCommandMode) {
+          actions.setCommandMode(false);
+          return;
+        }
+        
         const activeStreamIds = getActiveStreamIds();
         if (activeStreamIds.length > 0) {
           // Remove streaming messages instead of marking them as stopped
@@ -213,15 +249,29 @@ export const InputBox = memo(function InputBox() {
           currentInput.slice(0, index) + input + currentInput.slice(index);
         actions.setCurrentInput(updated);
         setCursorIndex(index + 1);
+        
+        // Detect command mode - if input starts with '/'
+        const startsWithSlash = updated.startsWith('/');
+        if (startsWithSlash && !isCommandMode) {
+          actions.setCommandMode(true);
+          actions.setCommandQuery(updated);
+        } else if (isCommandMode && startsWithSlash) {
+          actions.setCommandQuery(updated);
+        } else if (isCommandMode && !startsWithSlash) {
+          actions.setCommandMode(false);
+        }
       }
     },
     [
       actions,
       currentInput,
       currentMode,
+      isCommandMode,
       processMessage,
       getActiveStreamIds,
       stopAllStreams,
+      navigateCommandList,
+      getSelectedCommand,
       cursorIndex,
     ]
   ); // Depend on current state for immediate access

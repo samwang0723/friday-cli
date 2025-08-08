@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import meow from 'meow';
 import { AppActions, AuthMessage, AuthState, Mode } from '../types.js';
 import { googleLogin, logout, getAuthStatus } from '../services/oauth.js';
 import { COMMANDS, MESSAGE_TYPE } from '../utils/constants.js';
@@ -24,19 +25,57 @@ export function useCommandProcessor(
     async (command: string): Promise<void> => {
       switch (command.trim()) {
         case COMMANDS.HELP:
-          const helpMessages = [
-            'Available commands: /help, /login, /logout, /auth, /exit',
-            'Features: Shift+Tab to switch modes, Up/Down for history, ESC to stop streams',
-            '⚠️  Note: Make sure AgentCore backend is running for authentication',
-          ];
+          const cli = meow(
+            `Friday CLI - AI Assistant Terminal
 
-          helpMessages.forEach(content => {
-            actions.addMessage({
-              id: generateId(),
-              type: MESSAGE_TYPE.SYSTEM,
-              content,
-              timestamp: new Date(),
-            });
+	Usage
+	  $ friday-cli
+
+	Commands
+	  /help     Show this help message
+	  /clear    Clear chat history and reset to initial state
+	  /login    Authenticate with Google OAuth
+	  /logout   Sign out and clear authentication
+	  /auth     Show current authentication status
+	  /exit     Exit the application
+
+	Features
+	  Shift+Tab        Switch between chat and code modes
+	  Up/Down arrows   Navigate command history
+	  ESC             Stop streaming responses or exit command mode
+	  /               Enter command mode with auto-completion
+
+	Examples
+	  Type a message to chat with the AI
+	  Use /clear to start fresh
+	  Use /login to authenticate with your Google account
+          `,
+            {
+              importMeta: import.meta,
+              flags: {
+                help: {
+                  type: 'boolean',
+                  shortFlag: 'h',
+                },
+              },
+            }
+          );
+
+          actions.addMessage({
+            id: generateId(),
+            type: MESSAGE_TYPE.SYSTEM,
+            content: cli.help,
+            timestamp: new Date(),
+          });
+          break;
+
+        case COMMANDS.CLEAR:
+          actions.clearHistory();
+          actions.addMessage({
+            id: generateId(),
+            type: MESSAGE_TYPE.SYSTEM,
+            content: '🧹 Chat history cleared! Starting fresh.',
+            timestamp: new Date(),
           });
           break;
 

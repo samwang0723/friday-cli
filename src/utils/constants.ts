@@ -16,6 +16,7 @@ export const OAUTH_CONFIG = {
 // Commands
 export const COMMANDS = {
   HELP: '/help',
+  CLEAR: '/clear',
   LOGIN: '/login',
   LOGOUT: '/logout',
   AUTH: '/auth',

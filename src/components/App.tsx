@@ -4,6 +4,7 @@ import { AppProvider, useApp } from '../context/AppContext.js';
 import { ChatHistory } from './ChatHistory.js';
 import { InputBox } from './InputBox.js';
 import { StatusBar } from './StatusBar.js';
+import { CommandSearch } from './CommandSearch.js';
 import { MESSAGE_TYPE } from '../utils/constants.js';
 import VoiceRecorder from './VoiceRecorder.js';
 import { useScreenSize } from '../hooks/useScreenSize.js';
@@ -36,12 +37,15 @@ const FridayApp = memo(function FridayApp() {
   const { state } = useApp();
 
   return (
-    <Box flexDirection="column" width={width} padding={2}>
+    <Box flexDirection="column" width={width} height="100%" padding={2}>
       <AppInitializer />
-      <ChatHistory />
+      <Box flexGrow={1} flexShrink={1}>
+        <ChatHistory />
+      </Box>
       {state.currentMode === 'voice' && <VoiceRecorder />}
+      {state.isCommandMode && <CommandSearch />}
       <InputBox />
-      <StatusBar />
+      {!state.isCommandMode && <StatusBar />}
     </Box>
   );
 });
