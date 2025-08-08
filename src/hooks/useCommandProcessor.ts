@@ -26,30 +26,30 @@ export function useCommandProcessor(
       switch (command.trim()) {
         case COMMANDS.HELP:
           const cli = meow(
-            `Friday CLI - AI Assistant Terminal
+            `
+Friday CLI - AI Assistant Terminal
 
-	Usage
-	  $ friday-cli
+Usage
+  $ friday-cli
 
-	Commands
-	  /help     Show this help message
-	  /clear    Clear chat history and reset to initial state
-	  /login    Authenticate with Google OAuth
-	  /logout   Sign out and clear authentication
-	  /auth     Show current authentication status
-	  /exit     Exit the application
+Commands
+  /help     Show this help message
+  /clear    Clear chat history and reset to initial state
+  /login    Authenticate with Google OAuth
+  /logout   Sign out and clear authentication
+  /auth     Show current authentication status
+  /exit     Exit the application
 
-	Features
-	  Shift+Tab        Switch between chat and code modes
-	  Up/Down arrows   Navigate command history
-	  ESC             Stop streaming responses or exit command mode
-	  /               Enter command mode with auto-completion
+Features
+  Shift+Tab        Switch between chat and code modes
+  Up/Down arrows   Navigate command history
+  ESC             Stop streaming responses or exit command mode
+  /               Enter command mode with auto-completion
 
-	Examples
-	  Type a message to chat with the AI
-	  Use /clear to start fresh
-	  Use /login to authenticate with your Google account
-          `,
+Examples
+  Type a message to chat with the AI
+  Use /clear to start fresh
+  Use /login to authenticate with your Google account`,
             {
               importMeta: import.meta,
               flags: {
@@ -64,8 +64,9 @@ export function useCommandProcessor(
           actions.addMessage({
             id: generateId(),
             type: MESSAGE_TYPE.SYSTEM,
-            content: cli.help,
+            content: cli.help.trim(),
             timestamp: new Date(),
+            color: 'gray',
           });
           break;
 
