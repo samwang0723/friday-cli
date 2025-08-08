@@ -7,10 +7,10 @@ interface BaseMessageProps {
   indicator?: React.ReactNode;
 }
 
-export function BaseMessage({ 
-  children, 
-  marginTop = 1, 
-  indicator 
+export function BaseMessage({
+  children,
+  marginTop = 1,
+  indicator,
 }: BaseMessageProps) {
   return (
     <Box marginTop={marginTop}>
@@ -20,12 +20,12 @@ export function BaseMessage({
   );
 }
 
-export function MessageIndicator({ 
-  color, 
-  symbol = '⏺' 
-}: { 
-  color: string; 
-  symbol?: string; 
+export function MessageIndicator({
+  color,
+  symbol = '⏺',
+}: {
+  color: string;
+  symbol?: string;
 }) {
   return <Text color={color}>{symbol}</Text>;
 }

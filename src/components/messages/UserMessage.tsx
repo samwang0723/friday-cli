@@ -9,8 +9,8 @@ interface UserMessageProps {
 
 export function UserMessage({ message }: UserMessageProps) {
   return (
-    <BaseMessage indicator={<Text color="gray">{`> `}</Text>}>
-      <Text color="gray">{message.content}</Text>
+    <BaseMessage marginTop={1} indicator={<Text color="gray">{`> `}</Text>}>
+      <Text color="gray">{message.content.trim()}</Text>
     </BaseMessage>
   );
 }

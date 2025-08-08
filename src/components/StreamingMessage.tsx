@@ -4,6 +4,7 @@ import { StreamingMessage } from '../types.js';
 import { marked } from 'marked';
 import TerminalRenderer from 'marked-terminal';
 import { highlight } from 'cli-highlight';
+import chalk from 'chalk';
 
 interface StreamingMessageProps {
   message: StreamingMessage;
@@ -12,6 +13,8 @@ interface StreamingMessageProps {
 // Configure marked with terminal renderer and proper syntax highlighting
 marked.setOptions({
   renderer: new TerminalRenderer({
+    // Increase width to avoid hard-wrapping inside renderer; let Ink wrap
+    width: 1000,
     // Enable syntax highlighting
     code: (code: string, language?: string) => {
       try {
@@ -32,25 +35,8 @@ marked.setOptions({
       const prefix = '█'.repeat(level);
       return `${prefix} ${text}`;
     },
-    // // Fix list item rendering
-    // listitem: (text: string) => `• ${text}`,
-    // // Fix ordered list rendering with proper numbering
-    // list: (body: string, ordered: boolean) => {
-    //   if (ordered) {
-    //     const items = body.split('\n').filter(item => item.trim());
-    //     return (
-    //       items
-    //         .map((item, index) => item.replace(/^• /, `${index + 1}. `))
-    //         .join('\n') + '\n'
-    //     );
-    //   }
-    //   return body;
-    // },
-    // Fix bold and italic rendering
-    // strong: (text: string) => `\x1b[1m${text}\x1b[0m`,
-    // em: (text: string) => `\x1b[3m${text}\x1b[0m`,
-    // Fix paragraph rendering
-    // paragraph: (text: string) => `${text}\n`,
+    strong: (text: string) => `${chalk.bold(text)}`,
+    em: (text: string) => `${chalk.italic(text)}`,
   }),
 });
 
@@ -109,11 +95,11 @@ export const StreamingMessageComponent = memo(
             {message.partialContent || message.content ? (
               <>
                 <Text>
-                  {
+                  {(
                     marked(
                       message.partialContent || message.content || ''
                     ) as string
-                  }
+                  ).replace(/\n+$/, '')}
                 </Text>
                 {!message.isComplete && <Text color="gray">▊</Text>}
               </>
@@ -131,13 +117,15 @@ export const StreamingMessageComponent = memo(
           </Box>
         </Box>
 
-        {message.canStop && !message.isComplete && (
-          <Box marginLeft={2}>
-            <Text color="gray" dimColor>
-              Type ESC to cancel
-            </Text>
-          </Box>
-        )}
+        {message.canStop &&
+          !message.isComplete &&
+          !(message.partialContent || message.content) && (
+            <Box marginLeft={2}>
+              <Text color="gray" dimColor>
+                Type ESC to cancel
+              </Text>
+            </Box>
+          )}
       </Box>
     );
   }

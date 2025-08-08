@@ -4,7 +4,7 @@ import { googleLogin, logout, getAuthStatus } from '../services/oauth.js';
 import { COMMANDS, MESSAGE_TYPE } from '../utils/constants.js';
 
 function generateId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
 }
 
 export interface CommandProcessorOptions {
@@ -20,66 +20,69 @@ export function useCommandProcessor(
 ) {
   const { startStream, stopAllStreams, getActiveStreamIds } = options;
 
-  const processCommand = useCallback(async (command: string): Promise<void> => {
-    switch (command.trim()) {
-      case COMMANDS.HELP:
-        const helpMessages = [
-          'Available commands: /help, /login, /logout, /auth, /exit',
-          'Features: Shift+Tab to switch modes, Up/Down for history, ESC to stop streams',
-          '⚠️  Note: Make sure AgentCore backend is running for authentication'
-        ];
-        
-        helpMessages.forEach(content => {
+  const processCommand = useCallback(
+    async (command: string): Promise<void> => {
+      switch (command.trim()) {
+        case COMMANDS.HELP:
+          const helpMessages = [
+            'Available commands: /help, /login, /logout, /auth, /exit',
+            'Features: Shift+Tab to switch modes, Up/Down for history, ESC to stop streams',
+            '⚠️  Note: Make sure AgentCore backend is running for authentication',
+          ];
+
+          helpMessages.forEach(content => {
+            actions.addMessage({
+              id: generateId(),
+              type: MESSAGE_TYPE.SYSTEM,
+              content,
+              timestamp: new Date(),
+            });
+          });
+          break;
+
+        case COMMANDS.EXIT:
           actions.addMessage({
             id: generateId(),
             type: MESSAGE_TYPE.SYSTEM,
-            content,
+            content: 'Goodbye from Friday! 👋',
             timestamp: new Date(),
           });
-        });
-        break;
+          process.exit(0);
 
-      case COMMANDS.EXIT:
-        actions.addMessage({
-          id: generateId(),
-          type: MESSAGE_TYPE.SYSTEM,
-          content: 'Goodbye from Friday! 👋',
-          timestamp: new Date(),
-        });
-        process.exit(0);
+        case COMMANDS.LOGIN:
+          await handleLogin(actions);
+          break;
 
-      case COMMANDS.LOGIN:
-        await handleLogin(actions);
-        break;
+        case COMMANDS.LOGOUT:
+          await handleLogout(actions);
+          break;
 
-      case COMMANDS.LOGOUT:
-        await handleLogout(actions);
-        break;
+        case COMMANDS.AUTH:
+          handleAuthStatus(actions);
+          break;
 
-      case COMMANDS.AUTH:
-        handleAuthStatus(actions);
-        break;
+        default:
+          actions.addMessage({
+            id: generateId(),
+            type: MESSAGE_TYPE.SYSTEM,
+            content: `❌ Unknown command: ${command}. Type /help for available commands.`,
+            timestamp: new Date(),
+          });
+      }
+    },
+    [actions, stopAllStreams, getActiveStreamIds]
+  );
 
-      default:
-        actions.addMessage({
-          id: generateId(),
-          type: MESSAGE_TYPE.SYSTEM,
-          content: `❌ Unknown command: ${command}. Type /help for available commands.`,
-          timestamp: new Date(),
-        });
-    }
-  }, [actions, stopAllStreams, getActiveStreamIds]);
-
-  const processMessage = useCallback(async (
-    message: string,
-    currentMode: Mode
-  ): Promise<void> => {
-    if (message.startsWith('/')) {
-      await processCommand(message);
-    } else {
-      await startStream(message, currentMode);
-    }
-  }, [processCommand, startStream]);
+  const processMessage = useCallback(
+    async (message: string, currentMode: Mode): Promise<void> => {
+      if (message.startsWith('/')) {
+        await processCommand(message);
+      } else {
+        await startStream(message, currentMode);
+      }
+    },
+    [processCommand, startStream]
+  );
 
   return { processMessage, processCommand };
 }
@@ -218,4 +221,3 @@ function handleAuthStatus(actions: AppActions): void {
   };
   actions.addMessage(statusMessage);
 }
-
