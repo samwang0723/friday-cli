@@ -26,6 +26,9 @@ const initialState: AppState = {
   currentMode: 'text',
   chatHistory: [],
   currentInput: '',
+  isCommandMode: false,
+  commandQuery: '',
+  selectedCommandIndex: 0,
   streaming: {
     activeStreams: new Map(),
     connectionStatus: 'disconnected',
@@ -55,6 +58,11 @@ type AppAction =
   | { type: 'SET_CURRENT_INPUT'; payload: string }
   | { type: 'ADD_TO_COMMAND_HISTORY'; payload: string }
   | { type: 'NAVIGATE_HISTORY'; payload: 'up' | 'down' }
+  // Command mode actions
+  | { type: 'SET_COMMAND_MODE'; payload: boolean }
+  | { type: 'SET_COMMAND_QUERY'; payload: string }
+  | { type: 'SET_SELECTED_COMMAND_INDEX'; payload: number }
+  | { type: 'NAVIGATE_COMMAND_LIST'; payload: 'up' | 'down' }
   // Streaming actions
   | {
       type: 'START_STREAMING';
@@ -158,6 +166,32 @@ function appReducer(state: AppState, action: AppAction): AppState {
         }
       }
       return state;
+
+    // Command mode cases
+    case 'SET_COMMAND_MODE':
+      return { 
+        ...state, 
+        isCommandMode: action.payload,
+        // Reset command state when exiting command mode
+        commandQuery: action.payload ? state.commandQuery : '',
+        selectedCommandIndex: action.payload ? state.selectedCommandIndex : 0,
+      };
+
+    case 'SET_COMMAND_QUERY':
+      return { 
+        ...state, 
+        commandQuery: action.payload,
+        selectedCommandIndex: 0, // Reset selection when query changes
+      };
+
+    case 'SET_SELECTED_COMMAND_INDEX':
+      return { ...state, selectedCommandIndex: action.payload };
+
+    case 'NAVIGATE_COMMAND_LIST': {
+      // This will be handled by the command search component
+      // The component will determine available commands and bounds
+      return state;
+    }
 
     // Streaming cases
     case 'START_STREAMING': {
@@ -427,6 +461,25 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: APP_ACTIONS.NAVIGATE_HISTORY, payload: direction });
   }, []);
 
+  // Command mode action handlers
+  const setCommandMode = useCallback((isCommandMode: boolean) => {
+    dispatch({ type: 'SET_COMMAND_MODE', payload: isCommandMode });
+  }, []);
+
+  const setCommandQuery = useCallback((query: string) => {
+    dispatch({ type: 'SET_COMMAND_QUERY', payload: query });
+  }, []);
+
+  const setSelectedCommandIndex = useCallback((index: number) => {
+    dispatch({ type: 'SET_SELECTED_COMMAND_INDEX', payload: index });
+  }, []);
+
+  const navigateCommandList = useCallback((direction: 'up' | 'down') => {
+    // This will be handled by the useCommandNavigation hook
+    // We keep this for interface compatibility
+    dispatch({ type: 'NAVIGATE_COMMAND_LIST', payload: direction });
+  }, []);
+
   const setAuthenticated = useCallback((isAuth: boolean) => {
     dispatch({ type: APP_ACTIONS.SET_AUTHENTICATED, payload: isAuth });
   }, []);
@@ -615,6 +668,11 @@ export function AppProvider({ children }: AppProviderProps) {
       setCurrentInput,
       addToCommandHistory,
       navigateHistory,
+      // Command mode actions
+      setCommandMode,
+      setCommandQuery,
+      setSelectedCommandIndex,
+      navigateCommandList,
       // Enhanced auth actions
       setAuthLoading,
       setAuthError,
@@ -641,6 +699,10 @@ export function AppProvider({ children }: AppProviderProps) {
       setCurrentInput,
       addToCommandHistory,
       navigateHistory,
+      setCommandMode,
+      setCommandQuery,
+      setSelectedCommandIndex,
+      navigateCommandList,
       setAuthLoading,
       setAuthError,
       setAuthSuccess,

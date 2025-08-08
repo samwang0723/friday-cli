@@ -16,6 +16,7 @@ export const OAUTH_CONFIG = {
 // Commands
 export const COMMANDS = {
   HELP: '/help',
+  CLEAR: '/clear',
   LOGIN: '/login',
   LOGOUT: '/logout',
   AUTH: '/auth',
@@ -27,6 +28,7 @@ export const MESSAGE_TYPE = {
   SYSTEM: 'system',
   ACTION: 'action',
   AUTH: 'auth',
+  STREAMING: 'streaming',
 } as const;
 
 export const ACTION_TYPE = {

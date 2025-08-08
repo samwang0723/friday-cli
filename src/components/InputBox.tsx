@@ -1,18 +1,36 @@
-import React, { useCallback, useMemo, memo } from 'react';
+import React, { useCallback, useMemo, memo, useState, useEffect } from 'react';
 import { Box, Text, useInput } from 'ink';
 import { useApp } from '../context/AppContext.js';
 import { ChatMessage, ActionMessage } from '../types.js';
+import { useCommandNavigation } from '../hooks/useCommandNavigation.js';
 import { MESSAGE_TYPE, ACTION_TYPE } from '../utils/constants.js';
 import { useStreamingSession } from '../hooks/useStreamingSession.js';
 import { useCommandProcessor } from '../hooks/useCommandProcessor.js';
 
 function generateId(): string {
-  return `msg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
+}
+
+function normalizePastedText(raw: string): string {
+  const ESC = '\u001B';
+  // Strip bracketed paste mode markers if present
+  let text = raw
+    .split(`${ESC}[200~`)
+    .join('')
+    .split(`${ESC}[201~`)
+    .join('')
+    .split('[200~')
+    .join('')
+    .split('[201~')
+    .join('');
+  // Normalize newlines without regex
+  text = text.split('\r\n').join('\n').split('\r').join('\n');
+  return text;
 }
 
 export const InputBox = memo(function InputBox() {
   const { state, actions } = useApp();
-  const { currentInput, currentMode } = state;
+  const { currentInput, currentMode, isCommandMode } = state;
   const { startStream, stopAllStreams, getActiveStreamIds, isStreaming } =
     useStreamingSession();
 
@@ -22,6 +40,32 @@ export const InputBox = memo(function InputBox() {
     getActiveStreamIds,
     isStreaming,
   });
+
+  const { navigateCommandList, getSelectedCommand } = useCommandNavigation();
+
+  // Cursor position within currentInput (in characters)
+  const [cursorIndex, setCursorIndex] = useState<number>(
+    () => currentInput.length
+  );
+
+  // Enable bracketed paste mode so pasted content arrives as a single chunk
+  useEffect(() => {
+    if (process.stdout && process.stdout.isTTY) {
+      try {
+        process.stdout.write('\x1b[?2004h');
+      } catch {
+        // no-op
+      }
+      return () => {
+        try {
+          process.stdout.write('\x1b[?2004l');
+        } catch {
+          // no-op
+        }
+      };
+    }
+    return undefined;
+  }, []);
 
   // Keyboard handler that uses state directly instead of refs
   const handleKeyInput = useCallback(
@@ -38,17 +82,30 @@ export const InputBox = memo(function InputBox() {
       if (key.return) {
         if (!currentInput.trim()) return;
 
+        // If in command mode, use selected command
+        let commandToExecute = currentInput;
+        if (isCommandMode) {
+          const selectedCommand = getSelectedCommand();
+          if (selectedCommand) {
+            commandToExecute = selectedCommand.usage;
+            actions.setCurrentInput(selectedCommand.usage);
+          }
+          // Exit command mode after selection
+          actions.setCommandMode(false);
+        }
+
         // Inline submit logic to avoid circular dependency
         const userMessage: ChatMessage = {
           id: generateId(),
           type: MESSAGE_TYPE.USER,
-          content: currentInput,
+          content: commandToExecute,
           timestamp: new Date(),
         };
         actions.addMessage(userMessage);
-        actions.addToCommandHistory(currentInput);
-        processMessage(currentInput, currentMode);
+        actions.addToCommandHistory(commandToExecute);
+        processMessage(commandToExecute, currentMode);
         actions.setCurrentInput('');
+        setCursorIndex(0);
         return;
       }
 
@@ -58,19 +115,74 @@ export const InputBox = memo(function InputBox() {
       }
 
       if (key.upArrow) {
-        actions.navigateHistory('up');
+        if (isCommandMode) {
+          navigateCommandList('up');
+        } else {
+          actions.navigateHistory('up');
+          setCursorIndex(Number.MAX_SAFE_INTEGER);
+        }
         return;
       }
 
       if (key.downArrow) {
-        actions.navigateHistory('down');
+        if (isCommandMode) {
+          navigateCommandList('down');
+        } else {
+          actions.navigateHistory('down');
+          setCursorIndex(Number.MAX_SAFE_INTEGER);
+        }
         return;
       }
 
-      // Enhanced backspace handling
-      if (key.backspace || key.delete) {
-        if (currentInput.length > 0) {
-          actions.setCurrentInput(currentInput.slice(0, -1));
+      // Move cursor left/right
+      if (key.leftArrow) {
+        setCursorIndex(index => Math.max(0, index - 1));
+        return;
+      }
+
+      if (key.rightArrow) {
+        setCursorIndex(index => Math.min(currentInput.length, index + 1));
+        return;
+      }
+
+      // Home / End (Ctrl+A / Ctrl+E as common terminal bindings)
+      if (key.ctrl && (input === 'a' || input === 'A')) {
+        setCursorIndex(0);
+        return;
+      }
+      if (key.ctrl && (input === 'e' || input === 'E')) {
+        setCursorIndex(currentInput.length);
+        return;
+      }
+
+      // Backspace: delete character before cursor
+      if ((key as { backspace?: boolean }).backspace) {
+        const index = Math.min(cursorIndex, currentInput.length);
+        if (index > 0) {
+          const updated =
+            currentInput.slice(0, index - 1) + currentInput.slice(index);
+          actions.setCurrentInput(updated);
+          setCursorIndex(index - 1);
+          
+          // Update command mode based on updated content
+          const startsWithSlash = updated.startsWith('/');
+          if (isCommandMode && !startsWithSlash) {
+            actions.setCommandMode(false);
+          } else if (isCommandMode && startsWithSlash) {
+            actions.setCommandQuery(updated);
+          }
+        }
+        return;
+      }
+
+      // Delete: always delete character BEFORE the cursor (same as Backspace)
+      if ((key as { delete?: boolean }).delete) {
+        const index = Math.min(cursorIndex, currentInput.length);
+        if (index > 0) {
+          const updated =
+            currentInput.slice(0, index - 1) + currentInput.slice(index);
+          actions.setCurrentInput(updated);
+          setCursorIndex(index - 1);
         }
         return;
       }
@@ -80,8 +192,13 @@ export const InputBox = memo(function InputBox() {
         return;
       }
 
-      // Handle ESC key to stop all active streams
+      // Handle ESC key - exit command mode or stop streams
       if (key.escape) {
+        if (isCommandMode) {
+          actions.setCommandMode(false);
+          return;
+        }
+        
         const activeStreamIds = getActiveStreamIds();
         if (activeStreamIds.length > 0) {
           // Remove streaming messages instead of marking them as stopped
@@ -102,17 +219,60 @@ export const InputBox = memo(function InputBox() {
       }
 
       // Handle printable characters (check if it's a valid single character)
+      // First, handle multi-character input (likely paste)
+      const isBracketedPaste = Boolean(
+        input &&
+          (input.includes('\x1b[200~') ||
+            input.includes('\x1b[201~') ||
+            input.includes('[200~') ||
+            input.includes('[201~'))
+      );
+      if (
+        input &&
+        (input.length > 1 || isBracketedPaste) &&
+        !key.ctrl &&
+        !key.meta &&
+        !key.alt
+      ) {
+        const index = Math.min(cursorIndex, currentInput.length);
+        const pasted = normalizePastedText(input);
+        const updated =
+          currentInput.slice(0, index) + pasted + currentInput.slice(index);
+        actions.setCurrentInput(updated);
+        setCursorIndex(index + pasted.length);
+        return;
+      }
+
       if (input && input.length === 1 && !key.ctrl && !key.meta && !key.alt) {
-        actions.setCurrentInput(currentInput + input);
+        const index = Math.min(cursorIndex, currentInput.length);
+        const updated =
+          currentInput.slice(0, index) + input + currentInput.slice(index);
+        actions.setCurrentInput(updated);
+        setCursorIndex(index + 1);
+        
+        // Detect command mode - if input starts with '/'
+        const startsWithSlash = updated.startsWith('/');
+        if (startsWithSlash && !isCommandMode) {
+          actions.setCommandMode(true);
+          actions.setCommandQuery(updated);
+        } else if (isCommandMode && startsWithSlash) {
+          actions.setCommandQuery(updated);
+        } else if (isCommandMode && !startsWithSlash) {
+          actions.setCommandMode(false);
+        }
       }
     },
     [
       actions,
       currentInput,
       currentMode,
+      isCommandMode,
       processMessage,
       getActiveStreamIds,
       stopAllStreams,
+      navigateCommandList,
+      getSelectedCommand,
+      cursorIndex,
     ]
   ); // Depend on current state for immediate access
 
@@ -121,21 +281,22 @@ export const InputBox = memo(function InputBox() {
     isActive: true,
   });
 
-  // Memoize input display for performance
+  // Memoize input display with a visible cursor
   const inputDisplay = useMemo(() => {
-    const inputLines = currentInput.split('\n');
-    const displayLines = inputLines.slice(-10); // Show max 3 lines
+    const index = Math.min(cursorIndex, currentInput.length);
+    const before = currentInput.slice(0, index);
+    const cursorChar = currentInput[index] ?? ' ';
+    const after =
+      index < currentInput.length ? currentInput.slice(index + 1) : '';
 
     return (
-      <Box flexDirection="column" width="100%" marginX={1}>
-        {displayLines.map((line, index) => (
-          <Box key={index}>
-            <Text>{line}</Text>
-          </Box>
-        ))}
+      <Box flexDirection="row" width="100%" marginX={1}>
+        <Text>{before}</Text>
+        <Text inverse>{cursorChar}</Text>
+        <Text>{after}</Text>
       </Box>
     );
-  }, [currentInput]);
+  }, [currentInput, cursorIndex]);
 
   return (
     <Box borderStyle="round" borderColor="blue" paddingX={1}>

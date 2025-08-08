@@ -89,6 +89,11 @@ export interface AppState {
   chatHistory: ChatMessage[];
   currentInput: string;
 
+  // Command Mode State
+  isCommandMode: boolean;
+  commandQuery: string;
+  selectedCommandIndex: number;
+
   // Streaming State
   streaming: {
     activeStreams: Map<string, StreamingSession>;
@@ -122,6 +127,12 @@ export interface AppActions {
   setCurrentInput: (input: string) => void;
   addToCommandHistory: (command: string) => void;
   navigateHistory: (direction: 'up' | 'down') => void;
+
+  // Command Mode Management
+  setCommandMode: (isCommandMode: boolean) => void;
+  setCommandQuery: (query: string) => void;
+  setSelectedCommandIndex: (index: number) => void;
+  navigateCommandList: (direction: 'up' | 'down') => void;
 
   // Enhanced Auth Management
   setAuthLoading: (loading: boolean) => void;

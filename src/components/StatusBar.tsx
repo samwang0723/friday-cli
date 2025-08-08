@@ -25,7 +25,7 @@ export const StatusBar = memo(function StatusBar() {
   // Memoize auth display to prevent unnecessary re-renders
   const authDisplay = useMemo(() => {
     if (auth.isLoading) {
-      return <Text color="yellow">⚡ Authenticating...</Text>;
+      return <Text color="yellow">⚡Authenticating...</Text>;
     }
 
     if (auth.isAuthenticated && auth.user) {
@@ -33,7 +33,7 @@ export const StatusBar = memo(function StatusBar() {
       return <Text color="white">⏺ {displayName}</Text>;
     }
 
-    return <Text color="gray">🔒 Not authenticated</Text>;
+    return <Text color="gray">🔒Not authenticated</Text>;
   }, [auth.isLoading, auth.isAuthenticated, auth.user]);
 
   // Memoize connection display to prevent unnecessary re-renders
