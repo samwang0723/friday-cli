@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Box, Text } from 'ink';
-import { StreamingMessage } from '../types.js';
+import { StreamingMessage } from '../../types.js';
 import { marked } from 'marked';
 import TerminalRenderer from 'marked-terminal';
 import { highlight } from 'cli-highlight';

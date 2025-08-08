@@ -27,6 +27,7 @@ export const MESSAGE_TYPE = {
   SYSTEM: 'system',
   ACTION: 'action',
   AUTH: 'auth',
+  STREAMING: 'streaming',
 } as const;
 
 export const ACTION_TYPE = {

@@ -21,7 +21,7 @@ export function useStreamingSession() {
         actions.addMessage({
           id: generateId(),
           type: MESSAGE_TYPE.SYSTEM,
-          content: '🔒 Please login first using /login to send messages',
+          content: 'Please login first using /login to send messages',
           timestamp: new Date(),
         });
         return null;
