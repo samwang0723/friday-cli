@@ -20,7 +20,9 @@ export interface VoiceRecorderActions {
 
 export function useVoiceRecorder(): VoiceRecorderState & VoiceRecorderActions {
   const [isRecording, setIsRecording] = useState(false);
-  const [status, setStatus] = useState('Ready to record. Press SPACE to start.');
+  const [status, setStatus] = useState(
+    'Ready to record. Press SPACE to start.'
+  );
   const [isPlaying, setIsPlaying] = useState(false);
   const [isError, setIsError] = useState(false);
 
@@ -57,7 +59,7 @@ export function useVoiceRecorder(): VoiceRecorderState & VoiceRecorderActions {
 
   const stopRecordingAndPlay = useCallback(() => {
     if (!isRecording) return;
-    
+
     setIsRecording(false);
     setStatus('Stopped. Playing back...');
 

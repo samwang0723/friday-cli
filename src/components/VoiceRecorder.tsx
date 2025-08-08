@@ -5,13 +5,8 @@ import { Box, Text, useInput } from 'ink';
 import { useVoiceRecorder } from '../hooks/useVoiceRecorder.js';
 
 const VoiceRecorder: React.FC = memo(() => {
-  const {
-    isRecording,
-    status,
-    isPlaying,
-    isError,
-    handleSpacePress,
-  } = useVoiceRecorder();
+  const { isRecording, status, isPlaying, isError, handleSpacePress } =
+    useVoiceRecorder();
 
   const handleInput = useCallback(
     (input: string) => {

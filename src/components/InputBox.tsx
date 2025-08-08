@@ -163,7 +163,7 @@ export const InputBox = memo(function InputBox() {
             currentInput.slice(0, index - 1) + currentInput.slice(index);
           actions.setCurrentInput(updated);
           setCursorIndex(index - 1);
-          
+
           // Update command mode based on updated content
           const startsWithSlash = updated.startsWith('/');
           if (isCommandMode && !startsWithSlash) {
@@ -198,7 +198,7 @@ export const InputBox = memo(function InputBox() {
           actions.setCommandMode(false);
           return;
         }
-        
+
         const activeStreamIds = getActiveStreamIds();
         if (activeStreamIds.length > 0) {
           // Remove streaming messages instead of marking them as stopped
@@ -249,7 +249,7 @@ export const InputBox = memo(function InputBox() {
           currentInput.slice(0, index) + input + currentInput.slice(index);
         actions.setCurrentInput(updated);
         setCursorIndex(index + 1);
-        
+
         // Detect command mode - if input starts with '/'
         const startsWithSlash = updated.startsWith('/');
         if (startsWithSlash && !isCommandMode) {

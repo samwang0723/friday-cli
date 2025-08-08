@@ -10,7 +10,9 @@ interface ActionMessageComponentProps {
   message: ActionMessage;
 }
 
-export function ActionMessageComponent({ message }: ActionMessageComponentProps) {
+export function ActionMessageComponent({
+  message,
+}: ActionMessageComponentProps) {
   switch (message.actionType) {
     case ACTION_TYPE.DESCRIPTION:
       return <DescriptionAction message={message} />;

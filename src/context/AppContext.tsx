@@ -169,8 +169,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     // Command mode cases
     case 'SET_COMMAND_MODE':
-      return { 
-        ...state, 
+      return {
+        ...state,
         isCommandMode: action.payload,
         // Reset command state when exiting command mode
         commandQuery: action.payload ? state.commandQuery : '',
@@ -178,8 +178,8 @@ function appReducer(state: AppState, action: AppAction): AppState {
       };
 
     case 'SET_COMMAND_QUERY':
-      return { 
-        ...state, 
+      return {
+        ...state,
         commandQuery: action.payload,
         selectedCommandIndex: 0, // Reset selection when query changes
       };
@@ -300,9 +300,10 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'REMOVE_STREAMING_MESSAGES': {
       const messageIdsToRemove = action.payload;
       const filteredHistory = state.chatHistory.filter(
-        msg => !(msg.type === 'streaming' && messageIdsToRemove.includes(msg.id))
+        msg =>
+          !(msg.type === 'streaming' && messageIdsToRemove.includes(msg.id))
       );
-      
+
       // Also clean up active streams
       const newActiveStreams = new Map(state.streaming.activeStreams);
       messageIdsToRemove.forEach(id => {

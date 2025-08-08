@@ -9,9 +9,7 @@ interface DescriptionActionProps {
 
 export function DescriptionAction({ message }: DescriptionActionProps) {
   return (
-    <BaseMessage 
-      indicator={<MessageIndicator color="blue" />}
-    >
+    <BaseMessage indicator={<MessageIndicator color="blue" />}>
       <Text>{message.content}</Text>
     </BaseMessage>
   );
