@@ -5,9 +5,13 @@ A terminal-based AI assistant powered by React and Ink, providing an interactive
 ## Features
 
 - Interactive terminal chat interface with real-time streaming responses
+- Rich markdown rendering with syntax highlighting for code blocks
+- Voice recording and playback using SoX (Sound eXchange) integration
+- Advanced text input with cursor navigation and copy-paste support
+- Command search with fuzzy matching and keyboard navigation
 - OAuth authentication with Google via AgentCore backend
 - Multiple operation modes (text, voice, thinking)
-- Command history navigation
+- Command history navigation with arrow keys
 - Secure token management and session handling
 - TypeScript support with modern ES modules
 - Built with Bun runtime for optimal performance
@@ -15,8 +19,27 @@ A terminal-based AI assistant powered by React and Ink, providing an interactive
 ## Prerequisites
 
 - [Bun](https://bun.sh) v1.2.17 or later
+- [SoX (Sound eXchange)](http://sox.sourceforge.net/) for voice recording features
 - AgentCore backend service running (default: `http://localhost:3030/api/v1`)
 - Internet connection for OAuth authentication
+
+### Installing SoX
+
+#### macOS
+```bash
+brew install sox
+```
+
+#### Ubuntu/Debian
+```bash
+sudo apt-get install sox
+```
+
+#### Windows
+Download from [SoX official website](http://sox.sourceforge.net/) or use:
+```bash
+choco install sox
+```
 
 ## Installation
 
@@ -72,20 +95,39 @@ bun run build
 
 Once the application is running, you can use these commands:
 
-- `/help` - Display available commands
+- `/help` - Display available commands and search through them
 - `/login` - Authenticate with Google via AgentCore
 - `/logout` - Sign out and clear stored tokens
 - `/auth` - Check current authentication status
+- `/voice` - Toggle voice recording mode
 - `/exit` - Exit the application
+
+### Command Search
+
+Type `/` to enter command mode with fuzzy search capabilities:
+- Use arrow keys (↑/↓) to navigate through filtered commands
+- Press Enter to select a command
+- Press Escape to exit command search
 
 ### Chat Interface
 
 After authentication, simply type your messages and press Enter to chat with the AI assistant. The interface supports:
 
-- Real-time streaming responses
-- Command history (use ↑/↓ arrow keys)
-- Multiple conversation modes
-- Automatic token refresh
+- **Rich Markdown Rendering**: Code blocks with syntax highlighting, lists, links, and formatting
+- **Advanced Text Input**: Cursor navigation with left/right arrow keys, copy-paste support
+- **Real-time Streaming Responses**: Watch responses appear character by character
+- **Command History**: Navigate previous messages with ↑/↓ arrow keys
+- **Voice Recording**: Press Space in voice mode to record and play back audio
+- **Multiple Conversation Modes**: Text, voice, and thinking modes
+- **Automatic Token Refresh**: Seamless session management
+
+### Voice Recording
+
+Switch to voice mode with `/voice`:
+- Press **Space** to start/stop recording
+- SoX handles audio capture and playback
+- Visual indicators show recording (● REC) and playback (● PLAY) status
+- Press **Space** again to stop and play back your recording
 
 ## Development
 
@@ -96,16 +138,32 @@ src/
 ├── components/          # React/Ink UI components
 │   ├── App.tsx         # Main application component
 │   ├── ChatHistory.tsx # Message display component
-│   ├── InputBox.tsx    # Input handling and commands
-│   ├── MessageItem.tsx # Individual message rendering
-│   └── StatusBar.tsx   # Status and mode indicator
+│   ├── CommandSearch.tsx # Command search with fuzzy matching
+│   ├── InputBox.tsx    # Advanced input with cursor navigation
+│   ├── StatusBar.tsx   # Status and mode indicator
+│   ├── VoiceRecorder.tsx # Voice recording interface
+│   └── messages/       # Message rendering components
+│       ├── MarkdownInk.tsx # Rich markdown renderer
+│       ├── StreamingMessage.tsx # Real-time message streaming
+│       ├── AuthMessage.tsx # Authentication messages
+│       ├── BaseMessage.tsx # Base message component
+│       ├── SystemMessage.tsx # System notifications
+│       ├── UserMessage.tsx # User input display
+│       └── ActionMessage/ # Action message types
 ├── context/            # React context providers
 │   └── AppContext.tsx  # Global state management
+├── hooks/              # Custom React hooks
+│   ├── useCommandNavigation.ts # Command search navigation
+│   ├── useCommandProcessor.ts # Command processing logic
+│   ├── useScreenSize.ts # Terminal size detection
+│   ├── useStreamingSession.ts # Message streaming
+│   └── useVoiceRecorder.ts # Voice recording logic
 ├── services/           # External service integrations
 │   ├── agentcore.ts    # AgentCore API client
 │   └── oauth.ts        # Authentication service
 ├── utils/              # Utility functions and constants
-│   └── constants.ts    # Application constants
+│   ├── constants.ts    # Application constants
+│   └── streamingHelpers.ts # Streaming utilities
 ├── types.ts            # TypeScript type definitions
 ├── oauth-server.ts     # Local OAuth callback server
 └── index.tsx           # Application entry point
@@ -152,13 +210,24 @@ The project uses:
 
 ## Architecture
 
-Friday CLI follows a modern React architecture:
+Friday CLI follows a modern React architecture with advanced terminal interface capabilities:
 
-- **Frontend**: React components rendered in terminal via Ink
-- **State Management**: React Context with useReducer
-- **Backend Communication**: REST API calls to AgentCore with streaming support
-- **Authentication**: OAuth 2.0 flow via AgentCore proxy
-- **Runtime**: Bun for fast execution and built-in TypeScript support
+- **Frontend**: React components rendered in terminal via Ink with rich UI components
+- **State Management**: React Context with useReducer pattern for predictable state updates
+- **Backend Communication**: REST API calls to AgentCore with real-time streaming support
+- **Authentication**: OAuth 2.0 flow via AgentCore proxy with secure local token storage
+- **Voice Integration**: SoX (Sound eXchange) for cross-platform audio recording/playback
+- **Text Processing**: Markdown parsing with syntax highlighting using marked and cli-highlight
+- **Input Handling**: Advanced text editing with cursor positioning and clipboard support
+- **Runtime**: Bun for optimal performance and built-in TypeScript compilation
+
+### Key Technical Features
+
+- **Streaming Responses**: WebSocket-like streaming for real-time AI conversation
+- **Terminal Optimization**: Efficient rendering with Ink for responsive terminal UI
+- **Cross-Platform Audio**: SoX integration for consistent voice recording across OS
+- **Rich Text Rendering**: Full markdown support with code syntax highlighting
+- **Advanced Input**: Multi-line editing, cursor navigation, and clipboard integration
 
 ## Troubleshooting
 
@@ -191,6 +260,27 @@ HTTP 401: Unauthorized
 ```
 
 **Solution**: Re-authenticate using `/logout` then `/login`
+
+### Voice Recording Issues
+
+```
+SoX not found or voice recording fails
+```
+
+**Solutions**:
+
+- Install SoX using the instructions in Prerequisites section
+- On macOS: Ensure microphone permissions are granted to Terminal
+- On Linux: Check ALSA/PulseAudio configuration
+- Verify SoX installation: `sox --version`
+
+### Markdown Rendering Issues
+
+If code blocks or markdown elements don't display correctly:
+
+- Ensure terminal supports ANSI colors and formatting
+- Update terminal software for better Unicode support
+- Check terminal width for proper text wrapping
 
 ## Contributing
 

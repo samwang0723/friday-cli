@@ -11,7 +11,7 @@
     "strict": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "types": ["bun-types", "react", "react-dom"]
+    "types": ["bun-types", "react"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]
