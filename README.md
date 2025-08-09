@@ -132,6 +132,7 @@ bun run lint:fix
 ### Code Style
 
 The project uses:
+
 - **Prettier** for code formatting
 - **ESLint** for code linting
 - **TypeScript** for type safety
@@ -178,6 +179,7 @@ Token exchange timeout
 ```
 
 **Solutions**:
+
 - Check internet connection
 - Verify AgentCore backend is accessible
 - Ensure firewall allows localhost:8080 connections

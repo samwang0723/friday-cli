@@ -8,27 +8,27 @@ graph TD
     B --> C[React Ink App]
     C --> D[App Context Provider]
     D --> E[Main UI Components]
-    
+
     E --> F[Status Bar]
     E --> G[Chat History]
     E --> H[Input Box]
-    
+
     H --> I{Command Type?}
     I -->|/login| J[OAuth Service]
     I -->|/logout| K[Clear Tokens]
     I -->|/auth| L[Check Auth Status]
     I -->|Chat Message| M[AgentCore Service]
-    
+
     J --> N[Local OAuth Server]
     N --> O[Browser Launch]
     O --> P[Google OAuth]
     P --> Q[Callback Handler]
     Q --> R[Token Storage]
-    
+
     M --> S[AgentCore Backend]
     S --> T[Streaming Response]
     T --> U[Update Chat History]
-    
+
     R --> V[Update App State]
     U --> V
     V --> W[Re-render UI]
@@ -69,21 +69,21 @@ sequenceDiagram
 graph LR
     A[App.tsx] --> B[AppContext]
     B --> C[useReducer]
-    
+
     A --> D[StatusBar]
     A --> E[ChatHistory]
     A --> F[InputBox]
-    
+
     D --> B
     E --> B
     F --> B
-    
+
     F --> G[OAuth Service]
     F --> H[AgentCore Service]
-    
+
     G --> I[oauth-server.ts]
     H --> J[AgentCore Backend]
-    
+
     B --> K[State Management]
     K --> L[messages]
     K --> M[isAuthenticated]
@@ -101,27 +101,27 @@ flowchart TB
         D --> E[UI Components]
         E --> F[Terminal Display]
     end
-    
+
     subgraph "Services Layer"
         G[OAuth Service]
         H[AgentCore Service]
     end
-    
+
     subgraph "External Systems"
         I[AgentCore Backend]
         J[Google OAuth]
         K[Local File System]
     end
-    
+
     B --> G
     B --> H
     G --> J
     G --> K
     H --> I
-    
+
     G --> C
     H --> C
-    
+
     style A fill:#e1f5fe
     style F fill:#e8f5e8
     style I fill:#fff3e0
@@ -135,15 +135,15 @@ stateDiagram-v2
     [*] --> Initializing
     Initializing --> Unauthenticated: No valid tokens
     Initializing --> Authenticated: Valid tokens found
-    
+
     Unauthenticated --> AuthInProgress: /login command
     AuthInProgress --> Authenticated: OAuth success
     AuthInProgress --> Unauthenticated: OAuth failed
-    
+
     Authenticated --> Chatting: User sends message
     Chatting --> Authenticated: Response received
     Authenticated --> Unauthenticated: /logout command
-    
+
     state AuthInProgress {
         [*] --> ServerStarting
         ServerStarting --> BrowserOpening
@@ -160,24 +160,24 @@ graph LR
     A[User Input] --> B{Is Command?}
     B -->|Yes| C[Command Router]
     B -->|No| D[Chat Message]
-    
+
     C --> E[/login]
     C --> F[/logout]
     C --> G[/auth]
     C --> H[/help]
     C --> I[/exit]
-    
+
     E --> J[OAuth Flow]
     F --> K[Clear Auth]
     G --> L[Check Status]
     H --> M[Show Help]
     I --> N[Exit App]
-    
+
     D --> O[AgentCore API]
     O --> P[Streaming Response]
     P --> Q[Parse Chunks]
     Q --> R[Update History]
-    
+
     style A fill:#bbdefb
     style D fill:#c8e6c9
     style O fill:#ffcdd2

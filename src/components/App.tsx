@@ -30,7 +30,6 @@ function AppInitializer() {
   return null; // This component only handles side effects
 }
 
-
 // Main UI component that doesn't need context
 const FridayApp = memo(function FridayApp() {
   const { width } = useScreenSize(); // Get terminal width only

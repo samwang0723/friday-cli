@@ -13,27 +13,27 @@ const AVAILABLE_COMMANDS: Command[] = [
   {
     name: COMMANDS.HELP,
     description: 'Show available commands and features',
-    usage: '/help'
+    usage: '/help',
   },
   {
     name: COMMANDS.LOGIN,
     description: 'Authenticate with AgentCore using Google OAuth',
-    usage: '/login'
+    usage: '/login',
   },
   {
     name: COMMANDS.LOGOUT,
     description: 'Sign out from the current session',
-    usage: '/logout'
+    usage: '/logout',
   },
   {
     name: COMMANDS.AUTH,
     description: 'Check current authentication status',
-    usage: '/auth'
+    usage: '/auth',
   },
   {
     name: COMMANDS.EXIT,
     description: 'Exit the Friday CLI application',
-    usage: '/exit'
+    usage: '/exit',
   },
 ];
 
@@ -46,32 +46,36 @@ export function useCommandNavigation() {
     if (!commandQuery.trim()) {
       return AVAILABLE_COMMANDS;
     }
-    
+
     const query = commandQuery.toLowerCase().replace('/', '');
-    return AVAILABLE_COMMANDS.filter(command =>
-      command.name.toLowerCase().includes(query) ||
-      command.description.toLowerCase().includes(query)
+    return AVAILABLE_COMMANDS.filter(
+      command =>
+        command.name.toLowerCase().includes(query) ||
+        command.description.toLowerCase().includes(query)
     );
   }, [commandQuery]);
 
   // Navigate command list
-  const navigateCommandList = useCallback((direction: 'up' | 'down') => {
-    if (!isCommandMode) return;
-    
-    const commands = filteredCommands();
-    if (commands.length === 0) return;
+  const navigateCommandList = useCallback(
+    (direction: 'up' | 'down') => {
+      if (!isCommandMode) return;
 
-    const currentIndex = selectedCommandIndex;
-    let newIndex: number;
+      const commands = filteredCommands();
+      if (commands.length === 0) return;
 
-    if (direction === 'up') {
-      newIndex = currentIndex > 0 ? currentIndex - 1 : commands.length - 1;
-    } else {
-      newIndex = currentIndex < commands.length - 1 ? currentIndex + 1 : 0;
-    }
+      const currentIndex = selectedCommandIndex;
+      let newIndex: number;
 
-    actions.setSelectedCommandIndex(newIndex);
-  }, [isCommandMode, selectedCommandIndex, filteredCommands, actions]);
+      if (direction === 'up') {
+        newIndex = currentIndex > 0 ? currentIndex - 1 : commands.length - 1;
+      } else {
+        newIndex = currentIndex < commands.length - 1 ? currentIndex + 1 : 0;
+      }
+
+      actions.setSelectedCommandIndex(newIndex);
+    },
+    [isCommandMode, selectedCommandIndex, filteredCommands, actions]
+  );
 
   // Get currently selected command
   const getSelectedCommand = useCallback(() => {
@@ -85,17 +89,26 @@ export function useCommandNavigation() {
   // Auto-select command when it's the only match
   useEffect(() => {
     if (!isCommandMode) return;
-    
+
     const commands = filteredCommands();
     if (commands.length === 1 && selectedCommandIndex !== 0) {
       actions.setSelectedCommandIndex(0);
     }
-  }, [commandQuery, isCommandMode, filteredCommands, selectedCommandIndex, actions]);
+  }, [
+    commandQuery,
+    isCommandMode,
+    filteredCommands,
+    selectedCommandIndex,
+    actions,
+  ]);
 
   return {
     filteredCommands: filteredCommands(),
     navigateCommandList,
     getSelectedCommand,
-    selectedCommandIndex: Math.min(selectedCommandIndex, filteredCommands().length - 1),
+    selectedCommandIndex: Math.min(
+      selectedCommandIndex,
+      filteredCommands().length - 1
+    ),
   };
 }

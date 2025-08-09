@@ -54,7 +54,13 @@ export interface StreamingMessage extends BaseMessage {
   connectionId?: string;
 }
 
-export type ConnectionStatus = 'connecting' | 'connected' | 'streaming' | 'stopped' | 'error' | 'disconnected';
+export type ConnectionStatus =
+  | 'connecting'
+  | 'connected'
+  | 'streaming'
+  | 'stopped'
+  | 'error'
+  | 'disconnected';
 
 export interface StreamingSession {
   id: string;
@@ -64,7 +70,11 @@ export interface StreamingSession {
   startTime: Date;
 }
 
-export type ChatMessage = SimpleMessage | ActionMessage | AuthMessage | StreamingMessage;
+export type ChatMessage =
+  | SimpleMessage
+  | ActionMessage
+  | AuthMessage
+  | StreamingMessage;
 
 export interface UserInfo {
   id: string;
@@ -142,7 +152,10 @@ export interface AppActions {
   refreshAuth: () => Promise<void>;
 
   // Streaming Management
-  startStreaming: (type: 'thinking' | 'response' | 'connection', messageId: string) => void;
+  startStreaming: (
+    type: 'thinking' | 'response' | 'connection',
+    messageId: string
+  ) => void;
   updateStreamingContent: (messageId: string, partialContent: string) => void;
   completeStreaming: (messageId: string, finalContent?: string) => void;
   stopStreaming: (messageId: string) => void;
