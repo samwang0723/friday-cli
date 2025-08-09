@@ -1,44 +1,11 @@
 import React, { useState, useEffect, memo } from 'react';
 import { Box, Text } from 'ink';
 import { StreamingMessage } from '../../types.js';
-import { marked } from 'marked';
-import TerminalRenderer from 'marked-terminal';
-import { highlight } from 'cli-highlight';
-import chalk from 'chalk';
+import { MarkdownInk } from './MarkdownInk.js';
 
 interface StreamingMessageProps {
   message: StreamingMessage;
 }
-
-// Configure marked with terminal renderer and proper syntax highlighting
-marked.setOptions({
-  renderer: new TerminalRenderer({
-    // Increase width to avoid hard-wrapping inside renderer; let Ink wrap
-    width: 1000,
-    // Enable syntax highlighting
-    code: (code: string, language?: string) => {
-      try {
-        if (language) {
-          return highlight(code, { language, theme: 'github' });
-        }
-        return highlight(code, { theme: 'github' });
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      } catch (error) {
-        // Fallback to plain text if highlighting fails
-        return code;
-      }
-    },
-    // Fix blockquote rendering
-    blockquote: (quote: string) => `▐ ${quote}`,
-    // Fix heading rendering
-    heading: (text: string, level: number) => {
-      const prefix = '█'.repeat(level);
-      return `${prefix} ${text}`;
-    },
-    strong: (text: string) => `${chalk.bold(text)}`,
-    em: (text: string) => `${chalk.italic(text)}`,
-  }),
-});
 
 export const StreamingMessageComponent = memo(
   function StreamingMessageComponent({ message }: StreamingMessageProps) {
@@ -91,16 +58,12 @@ export const StreamingMessageComponent = memo(
       <Box flexDirection="column" marginTop={1}>
         <Box>
           <Text color={color}>{indicator}</Text>
-          <Box flexGrow={1}>
+          <Box flexGrow={1} flexDirection="column">
             {message.partialContent || message.content ? (
               <>
-                <Text>
-                  {(
-                    marked(
-                      message.partialContent || message.content || ''
-                    ) as string
-                  ).replace(/\n+$/, '')}
-                </Text>
+                <MarkdownInk
+                  text={message.partialContent || message.content || ''}
+                />
                 {!message.isComplete && <Text color="gray">▊</Text>}
               </>
             ) : (

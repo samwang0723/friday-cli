@@ -20,7 +20,7 @@ export const ChatHistory = memo(function ChatHistory() {
   );
 
   return (
-    <Box flexDirection="column" marginY={1} width={80}>
+    <Box flexDirection="column" marginY={1} width={100}>
       {messageElements}
     </Box>
   );
