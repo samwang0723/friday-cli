@@ -29,6 +29,9 @@ const initialState: AppState = {
   isCommandMode: false,
   commandQuery: '',
   selectedCommandIndex: 0,
+  isFileMode: false,
+  fileQuery: '',
+  selectedFileIndex: 0,
   streaming: {
     activeStreams: new Map(),
     connectionStatus: 'disconnected',
@@ -63,6 +66,11 @@ type AppAction =
   | { type: 'SET_COMMAND_QUERY'; payload: string }
   | { type: 'SET_SELECTED_COMMAND_INDEX'; payload: number }
   | { type: 'NAVIGATE_COMMAND_LIST'; payload: 'up' | 'down' }
+  // File mode actions
+  | { type: 'SET_FILE_MODE'; payload: boolean }
+  | { type: 'SET_FILE_QUERY'; payload: string }
+  | { type: 'SET_SELECTED_FILE_INDEX'; payload: number }
+  | { type: 'NAVIGATE_FILE_LIST'; payload: 'up' | 'down' }
   // Streaming actions
   | {
       type: 'START_STREAMING';
@@ -190,6 +198,32 @@ function appReducer(state: AppState, action: AppAction): AppState {
     case 'NAVIGATE_COMMAND_LIST': {
       // This will be handled by the command search component
       // The component will determine available commands and bounds
+      return state;
+    }
+
+    // File mode cases
+    case 'SET_FILE_MODE':
+      return {
+        ...state,
+        isFileMode: action.payload,
+        // Reset file state when exiting file mode
+        fileQuery: action.payload ? state.fileQuery : '',
+        selectedFileIndex: action.payload ? state.selectedFileIndex : 0,
+      };
+
+    case 'SET_FILE_QUERY':
+      return {
+        ...state,
+        fileQuery: action.payload,
+        selectedFileIndex: 0, // Reset selection when query changes
+      };
+
+    case 'SET_SELECTED_FILE_INDEX':
+      return { ...state, selectedFileIndex: action.payload };
+
+    case 'NAVIGATE_FILE_LIST': {
+      // This will be handled by the file navigation component
+      // The component will determine available files and bounds
       return state;
     }
 
@@ -481,6 +515,25 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: 'NAVIGATE_COMMAND_LIST', payload: direction });
   }, []);
 
+  // File mode action handlers
+  const setFileMode = useCallback((isFileMode: boolean) => {
+    dispatch({ type: 'SET_FILE_MODE', payload: isFileMode });
+  }, []);
+
+  const setFileQuery = useCallback((query: string) => {
+    dispatch({ type: 'SET_FILE_QUERY', payload: query });
+  }, []);
+
+  const setSelectedFileIndex = useCallback((index: number) => {
+    dispatch({ type: 'SET_SELECTED_FILE_INDEX', payload: index });
+  }, []);
+
+  const navigateFileList = useCallback((direction: 'up' | 'down') => {
+    // This will be handled by the useFileNavigation hook
+    // We keep this for interface compatibility
+    dispatch({ type: 'NAVIGATE_FILE_LIST', payload: direction });
+  }, []);
+
   const setAuthenticated = useCallback((isAuth: boolean) => {
     dispatch({ type: APP_ACTIONS.SET_AUTHENTICATED, payload: isAuth });
   }, []);
@@ -674,6 +727,11 @@ export function AppProvider({ children }: AppProviderProps) {
       setCommandQuery,
       setSelectedCommandIndex,
       navigateCommandList,
+      // File mode actions
+      setFileMode,
+      setFileQuery,
+      setSelectedFileIndex,
+      navigateFileList,
       // Enhanced auth actions
       setAuthLoading,
       setAuthError,
@@ -704,6 +762,10 @@ export function AppProvider({ children }: AppProviderProps) {
       setCommandQuery,
       setSelectedCommandIndex,
       navigateCommandList,
+      setFileMode,
+      setFileQuery,
+      setSelectedFileIndex,
+      navigateFileList,
       setAuthLoading,
       setAuthError,
       setAuthSuccess,
