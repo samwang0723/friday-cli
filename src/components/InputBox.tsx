@@ -7,6 +7,11 @@ import { useFileNavigation } from '../hooks/useFileNavigation.js';
 import { MESSAGE_TYPE, ACTION_TYPE } from '../utils/constants.js';
 import { useStreamingSession } from '../hooks/useStreamingSession.js';
 import { useCommandProcessor } from '../hooks/useCommandProcessor.js';
+import {
+  processMessageWithFileContext,
+  extractFileReferences,
+  readFileContentWithMetadata,
+} from '../utils/fileReader.js';
 
 function generateId(): string {
   return `msg_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
@@ -91,14 +96,20 @@ export const InputBox = memo(function InputBox() {
             if (atIndex !== -1) {
               // Find the end of the current query (find next space or end of string)
               let queryEndIndex = atIndex + 1;
-              while (queryEndIndex < currentInput.length && currentInput[queryEndIndex] !== ' ') {
+              while (
+                queryEndIndex < currentInput.length &&
+                currentInput[queryEndIndex] !== ' '
+              ) {
                 queryEndIndex++;
               }
-              
+
               const beforeAt = currentInput.slice(0, atIndex);
               const afterQuery = currentInput.slice(queryEndIndex);
-              const filePathWithSlash = selectedFile.relativePath + (selectedFile.isDirectory ? '/' : '');
-              const updatedInput = beforeAt + '@' + filePathWithSlash + afterQuery;
+              const filePathWithSlash =
+                selectedFile.relativePath +
+                (selectedFile.isDirectory ? '/' : '');
+              const updatedInput =
+                beforeAt + '@' + filePathWithSlash + afterQuery;
               actions.setCurrentInput(updatedInput);
               setCursorIndex(beforeAt.length + 1 + filePathWithSlash.length);
             }
@@ -135,17 +146,92 @@ export const InputBox = memo(function InputBox() {
         // Regular message submission
         if (!currentInput.trim()) return;
 
-        const userMessage: ChatMessage = {
-          id: generateId(),
-          type: MESSAGE_TYPE.USER,
-          content: currentInput,
-          timestamp: new Date(),
+        // Process message with file context asynchronously
+        const handleMessageSubmission = async () => {
+          try {
+            const fileReferences = extractFileReferences(currentInput);
+
+            // Display the original user message WITH file references for clarity
+            const displayMessage = currentInput;
+
+            const userMessage: ChatMessage = {
+              id: generateId(),
+              type: MESSAGE_TYPE.USER,
+              content: displayMessage,
+              timestamp: new Date(),
+            };
+            actions.addMessage(userMessage);
+
+            // Add nested action messages for each file being loaded
+            for (const fileRef of fileReferences) {
+              try {
+                const result = await readFileContentWithMetadata(fileRef.path);
+                if (result !== null) {
+                  let statusText;
+                  if (result.isDirectory) {
+                    // For directories, use the metadata
+                    statusText = `Read ${fileRef.path} (${result.fileCount} files, ${result.totalLines} lines total)`;
+                  } else {
+                    // For individual files
+                    statusText = `Read ${fileRef.path} (${result.totalLines} lines)`;
+                  }
+
+                  const actionMessage: ActionMessage = {
+                    id: generateId(),
+                    type: MESSAGE_TYPE.ACTION,
+                    actionType: ACTION_TYPE.NESTED,
+                    content: statusText,
+                    timestamp: new Date(),
+                  };
+                  actions.addMessage(actionMessage, 'gray');
+                } else {
+                  // Show error for failed file reads
+                  const errorMessage: ActionMessage = {
+                    id: generateId(),
+                    type: MESSAGE_TYPE.ACTION,
+                    actionType: ACTION_TYPE.NESTED,
+                    content: `Failed to read ${fileRef.path}`,
+                    timestamp: new Date(),
+                  };
+                  actions.addMessage(errorMessage, 'red');
+                }
+              } catch (error) {
+                const errorMessage: ActionMessage = {
+                  id: generateId(),
+                  type: MESSAGE_TYPE.ACTION,
+                  actionType: ACTION_TYPE.NESTED,
+                  content: `Error reading ${fileRef.path}: ${error}`,
+                  timestamp: new Date(),
+                };
+                actions.addMessage(errorMessage, 'red');
+              }
+            }
+
+            // Process the message with full file content for AI
+            const processedContent =
+              await processMessageWithFileContext(currentInput);
+            actions.addToCommandHistory(currentInput); // Keep original in history
+            processMessage(processedContent, currentMode);
+            actions.setCurrentInput('');
+            setCursorIndex(0);
+          } catch (error) {
+            console.error('Error processing message with file context:', error);
+            // Fallback to original message if file processing fails
+            const userMessage: ChatMessage = {
+              id: generateId(),
+              type: MESSAGE_TYPE.USER,
+              content: currentInput,
+              timestamp: new Date(),
+            };
+            actions.addMessage(userMessage);
+            actions.addToCommandHistory(currentInput);
+            processMessage(currentInput, currentMode);
+            actions.setCurrentInput('');
+            setCursorIndex(0);
+          }
         };
-        actions.addMessage(userMessage);
-        actions.addToCommandHistory(currentInput);
-        processMessage(currentInput, currentMode);
-        actions.setCurrentInput('');
-        setCursorIndex(0);
+
+        handleMessageSubmission();
         return;
       }
 
@@ -210,7 +296,7 @@ export const InputBox = memo(function InputBox() {
 
           // Check what character was deleted
           const deletedChar = currentInput[index - 1];
-          
+
           // Update command mode based on updated content
           const startsWithSlash = updated.startsWith('/');
           if (isCommandMode) {
@@ -221,7 +307,7 @@ export const InputBox = memo(function InputBox() {
             }
           }
 
-          // Update file mode based on updated content  
+          // Update file mode based on updated content
           if (isFileMode) {
             const hasAtSymbol = updated.includes('@');
             if (!hasAtSymbol || deletedChar === '@') {
@@ -245,7 +331,7 @@ export const InputBox = memo(function InputBox() {
 
           // Check what character was deleted
           const deletedChar = currentInput[index - 1];
-          
+
           // Update command mode based on updated content
           const startsWithSlash = updated.startsWith('/');
           if (isCommandMode) {
@@ -256,7 +342,7 @@ export const InputBox = memo(function InputBox() {
             }
           }
 
-          // Update file mode based on updated content  
+          // Update file mode based on updated content
           if (isFileMode) {
             const hasAtSymbol = updated.includes('@');
             if (!hasAtSymbol || deletedChar === '@') {
