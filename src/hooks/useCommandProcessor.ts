@@ -71,7 +71,7 @@ Examples
           break;
 
         case COMMANDS.CLEAR:
-          actions.clearHistory();
+          await actions.clearHistory();
           actions.addMessage({
             id: generateId(),
             type: MESSAGE_TYPE.SYSTEM,

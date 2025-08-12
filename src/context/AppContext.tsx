@@ -480,9 +480,25 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: APP_ACTIONS.ADD_MESSAGE, payload: messageWithColor });
   }, []);
 
-  const clearHistory = useCallback(() => {
-    dispatch({ type: APP_ACTIONS.CLEAR_HISTORY });
-  }, []);
+  const clearHistory = useCallback(async () => {
+    try {
+      // Clear local history first
+      dispatch({ type: APP_ACTIONS.CLEAR_HISTORY });
+      
+      // Clear agentCore history if authenticated
+      if (state.auth.isAuthenticated && state.auth.token) {
+        const agentCore = new AgentCoreService(OAUTH_CONFIG.AGENT_CORE_BASE_URL);
+        await agentCore.clearHistory(state.auth.token, {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          clientDatetime: new Date().toISOString(),
+          locale: process.env.LANG?.split('.')[0]?.replace('_', '-') || 'en',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to clear agentCore history:', error);
+      // Continue with local clear even if remote clear fails
+    }
+  }, [state.auth.isAuthenticated, state.auth.token]);
 
   const setCurrentInput = useCallback((input: string) => {
     dispatch({ type: APP_ACTIONS.SET_CURRENT_INPUT, payload: input });

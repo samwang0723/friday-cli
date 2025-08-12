@@ -136,7 +136,7 @@ export interface AppActions {
 
   // Chat Management
   addMessage: (message: ChatMessage, color?: string) => void;
-  clearHistory: () => void;
+  clearHistory: () => Promise<void>;
 
   // Input Management
   setCurrentInput: (input: string) => void;
