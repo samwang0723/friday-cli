@@ -65,7 +65,7 @@ function mapToAgentCoreLocale(locale?: string): AgentCoreLocale | undefined {
 }
 
 export class AgentCoreService {
-  private static readonly DEFAULT_STREAM_TIMEOUT = 30000; // 30 seconds
+  private static readonly DEFAULT_STREAM_TIMEOUT = 120000; // 2 minutes
 
   private baseURL: string;
   private streamTimeout: number;

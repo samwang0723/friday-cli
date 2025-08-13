@@ -21,9 +21,9 @@ export function parseFileModifications(
 ): ParsedFileModification[] {
   const modifications: ParsedFileModification[] = [];
 
-  // Regex to match: filepath followed by code block
+  // Regex to match: filepath (with optional "File: " prefix) followed by code block
   const pattern =
-    /^(.+?\.(ts|tsx|js|jsx|html|css|json|md|go|rs|py|rb|sh|bash))\s*\n```(\w+)?\n([\s\S]*?)\n```/gm;
+    /^(?:File:\s*)?(.+?\.(ts|tsx|js|jsx|html|css|json|md|go|rs|py|rb|sh|bash|json|txt))\s*\n```(\w+)?\n([\s\S]*?)\n```/gm;
 
   let match;
   while ((match = pattern.exec(response)) !== null) {
@@ -96,7 +96,7 @@ export function generateDiffLines(
 export function removeFileModificationBlocks(content: string): string {
   // Same regex pattern as parseFileModifications
   const pattern =
-    /^(.+?\.(ts|tsx|js|jsx|html|css|json|md|go|rs|py|rb|sh|bash))\s*\n```(\w+)?\n([\s\S]*?)\n```/gm;
+    /^(?:File:\s*)?(.+?\.(ts|tsx|js|jsx|html|css|json|md|go|rs|py|rb|sh|bash|json|txt))\s*\n```(\w+)?\n([\s\S]*?)\n```/gm;
 
   // Remove file modification blocks completely (replace with empty string)
   let cleanedContent = content.replace(pattern, '');
@@ -112,9 +112,9 @@ export function removeFileModificationBlocks(content: string): string {
  * Once we detect the start of a file modification (filename + ```), we truncate the content
  */
 export function filterStreamingContent(content: string): string {
-  // Pattern to detect the start of a file modification: filename followed by ```
+  // Pattern to detect the start of a file modification: filename (with optional "File: " prefix) followed by ```
   const fileModStartPattern =
-    /^(.+?\.(ts|tsx|js|jsx|html|css|json|md|go|rs|py|rb|sh|bash))\s*\n```/gm;
+    /^(?:File:\s*)?(.+?\.(ts|tsx|js|jsx|html|css|json|md|go|rs|py|rb|sh|bash))\s*\n```/gm;
 
   // Find if there's a file modification starting
   const match = fileModStartPattern.exec(content);
