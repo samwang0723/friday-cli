@@ -104,6 +104,11 @@ export interface AppState {
   commandQuery: string;
   selectedCommandIndex: number;
 
+  // File Mode State
+  isFileMode: boolean;
+  fileQuery: string;
+  selectedFileIndex: number;
+
   // Streaming State
   streaming: {
     activeStreams: Map<string, StreamingSession>;
@@ -131,7 +136,7 @@ export interface AppActions {
 
   // Chat Management
   addMessage: (message: ChatMessage, color?: string) => void;
-  clearHistory: () => void;
+  clearHistory: () => Promise<void>;
 
   // Input Management
   setCurrentInput: (input: string) => void;
@@ -143,6 +148,12 @@ export interface AppActions {
   setCommandQuery: (query: string) => void;
   setSelectedCommandIndex: (index: number) => void;
   navigateCommandList: (direction: 'up' | 'down') => void;
+
+  // File Mode Management
+  setFileMode: (isFileMode: boolean) => void;
+  setFileQuery: (query: string) => void;
+  setSelectedFileIndex: (index: number) => void;
+  navigateFileList: (direction: 'up' | 'down') => void;
 
   // Enhanced Auth Management
   setAuthLoading: (loading: boolean) => void;
@@ -157,7 +168,7 @@ export interface AppActions {
     messageId: string
   ) => void;
   updateStreamingContent: (messageId: string, partialContent: string) => void;
-  completeStreaming: (messageId: string, finalContent?: string) => void;
+  completeStreaming: (messageId: string, finalContent?: string) => Promise<void>;
   stopStreaming: (messageId: string) => void;
   removeStreamingMessages: (messageIds: string[]) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;

@@ -5,6 +5,7 @@ import { ChatHistory } from './ChatHistory.js';
 import { InputBox } from './InputBox.js';
 import { StatusBar } from './StatusBar.js';
 import { CommandSearch } from './CommandSearch.js';
+import { FileSearch } from './FileSearch.js';
 import { MESSAGE_TYPE } from '../utils/constants.js';
 import VoiceRecorder from './VoiceRecorder.js';
 import { useScreenSize } from '../hooks/useScreenSize.js';
@@ -43,8 +44,9 @@ const FridayApp = memo(function FridayApp() {
       </Box>
       {state.currentMode === 'voice' && <VoiceRecorder />}
       {state.isCommandMode && <CommandSearch />}
+      {state.isFileMode && <FileSearch />}
       <InputBox />
-      {!state.isCommandMode && <StatusBar />}
+      {!state.isCommandMode && !state.isFileMode && <StatusBar />}
     </Box>
   );
 });

@@ -31,6 +31,11 @@ const AVAILABLE_COMMANDS: Command[] = [
     usage: '/auth',
   },
   {
+    name: COMMANDS.CLEAR,
+    description: 'Clear chat history and reset to initial state',
+    usage: '/clear',
+  },
+  {
     name: COMMANDS.EXIT,
     description: 'Exit the Friday CLI application',
     usage: '/exit',

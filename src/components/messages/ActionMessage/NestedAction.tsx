@@ -9,9 +9,11 @@ interface NestedActionProps {
 export function NestedAction({ message }: NestedActionProps) {
   const textColor = message.color || undefined;
   return (
-    <Box>
-      <Text color="gray">⎿ </Text>
-      <Text color={textColor}>{` ${message.content}`}</Text>
+    <Box flexDirection="column">
+      <Box>
+        <Text color="white">{`   ⎿ `}</Text>
+        <Text color={textColor}>{` ${message.content}`}</Text>
+      </Box>
     </Box>
   );
 }

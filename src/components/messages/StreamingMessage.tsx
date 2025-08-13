@@ -1,5 +1,6 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { memo } from 'react';
 import { Box, Text } from 'ink';
+import { Spinner } from '@inkjs/ui';
 import { StreamingMessage } from '../../types.js';
 import { MarkdownInk } from './MarkdownInk.js';
 
@@ -9,17 +10,6 @@ interface StreamingMessageProps {
 
 export const StreamingMessageComponent = memo(
   function StreamingMessageComponent({ message }: StreamingMessageProps) {
-    const [dotCount, setDotCount] = useState(0);
-
-    // Animate typing indicator dots when streaming
-    useEffect(() => {
-      if (!message.isComplete) {
-        const interval = setInterval(() => {
-          setDotCount(prev => (prev + 1) % 4);
-        }, 500);
-        return () => clearInterval(interval);
-      }
-    }, [message.isComplete]);
 
     const getIndicatorAndColor = () => {
       switch (message.streamingType) {
@@ -51,30 +41,25 @@ export const StreamingMessageComponent = memo(
     };
 
     const { indicator, color, label } = getIndicatorAndColor();
-    const dots = '.'.repeat(dotCount);
-    const spaces = ' '.repeat(3 - dotCount);
 
     return (
       <Box flexDirection="column" marginTop={1}>
         <Box>
-          <Text color={color}>{indicator}</Text>
+          {!message.isComplete ? (
+            <Spinner />
+          ) : (
+            <Text color={color}>{indicator}</Text>
+          )}
+          <Text> </Text>
           <Box flexGrow={1} flexDirection="column">
             {message.partialContent || message.content ? (
-              <>
-                <MarkdownInk
-                  text={message.partialContent || message.content || ''}
-                />
-                {!message.isComplete && <Text color="gray">▊</Text>}
-              </>
+              <MarkdownInk
+                text={message.partialContent || message.content || ''}
+              />
             ) : (
               <Text>
                 <Text color={color}>{label}</Text>
-                {!message.isComplete && (
-                  <Text color={color}>
-                    {dots}
-                    {spaces}
-                  </Text>
-                )}
+                {!message.isComplete && <Text color="gray">...</Text>}
               </Text>
             )}
           </Box>

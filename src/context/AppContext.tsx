@@ -11,6 +11,7 @@ import {
   AppState,
   AppActions,
   ChatMessage,
+  ActionMessage,
   Mode,
   modes,
   AuthState,
@@ -20,6 +21,8 @@ import {
 import { getAuthStatus, getToken } from '../services/oauth.js';
 import { APP_ACTIONS, OAUTH_CONFIG } from '../utils/constants.js';
 import { AgentCoreService } from '../services/agentcore.js';
+import { processChatStreamForDiffs } from '../utils/chatStreamDiffProcessor.js';
+import { removeFileModificationBlocks, filterStreamingContent } from '../utils/chatStreamParser.js';
 
 // Initial state
 const initialState: AppState = {
@@ -29,6 +32,9 @@ const initialState: AppState = {
   isCommandMode: false,
   commandQuery: '',
   selectedCommandIndex: 0,
+  isFileMode: false,
+  fileQuery: '',
+  selectedFileIndex: 0,
   streaming: {
     activeStreams: new Map(),
     connectionStatus: 'disconnected',
@@ -63,6 +69,11 @@ type AppAction =
   | { type: 'SET_COMMAND_QUERY'; payload: string }
   | { type: 'SET_SELECTED_COMMAND_INDEX'; payload: number }
   | { type: 'NAVIGATE_COMMAND_LIST'; payload: 'up' | 'down' }
+  // File mode actions
+  | { type: 'SET_FILE_MODE'; payload: boolean }
+  | { type: 'SET_FILE_QUERY'; payload: string }
+  | { type: 'SET_SELECTED_FILE_INDEX'; payload: number }
+  | { type: 'NAVIGATE_FILE_LIST'; payload: 'up' | 'down' }
   // Streaming actions
   | {
       type: 'START_STREAMING';
@@ -77,7 +88,7 @@ type AppAction =
     }
   | {
       type: 'COMPLETE_STREAMING';
-      payload: { messageId: string; finalContent?: string };
+      payload: { messageId: string; finalContent?: string; diffMessages?: ActionMessage[] };
     }
   | { type: 'STOP_STREAMING'; payload: { messageId: string } }
   | { type: 'REMOVE_STREAMING_MESSAGES'; payload: string[] }
@@ -193,6 +204,32 @@ function appReducer(state: AppState, action: AppAction): AppState {
       return state;
     }
 
+    // File mode cases
+    case 'SET_FILE_MODE':
+      return {
+        ...state,
+        isFileMode: action.payload,
+        // Reset file state when exiting file mode
+        fileQuery: action.payload ? state.fileQuery : '',
+        selectedFileIndex: action.payload ? state.selectedFileIndex : 0,
+      };
+
+    case 'SET_FILE_QUERY':
+      return {
+        ...state,
+        fileQuery: action.payload,
+        selectedFileIndex: 0, // Reset selection when query changes
+      };
+
+    case 'SET_SELECTED_FILE_INDEX':
+      return { ...state, selectedFileIndex: action.payload };
+
+    case 'NAVIGATE_FILE_LIST': {
+      // This will be handled by the file navigation component
+      // The component will determine available files and bounds
+      return state;
+    }
+
     // Streaming cases
     case 'START_STREAMING': {
       const { type, messageId } = action.payload;
@@ -217,12 +254,15 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'UPDATE_STREAMING_CONTENT': {
       const { messageId, partialContent } = action.payload;
+      // Filter out code blocks from streaming content in real-time
+      const filteredContent = filterStreamingContent(partialContent);
+      
       const updatedHistory = state.chatHistory.map(msg => {
         if (msg.id === messageId && msg.type === 'streaming') {
           return {
             ...msg,
-            partialContent,
-            content: partialContent, // For backward compatibility
+            partialContent: filteredContent,
+            content: filteredContent, // For backward compatibility
           };
         }
         return msg;
@@ -235,7 +275,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'COMPLETE_STREAMING': {
-      const { messageId, finalContent } = action.payload;
+      const { messageId, finalContent, diffMessages } = action.payload;
       const newActiveStreams = new Map(state.streaming.activeStreams);
       newActiveStreams.delete(messageId);
 
@@ -252,9 +292,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return msg;
       });
 
+      // Add diff messages if they exist
+      const finalHistory = diffMessages && diffMessages.length > 0 
+        ? [...updatedHistory, ...diffMessages]
+        : updatedHistory;
+
       return {
         ...state,
-        chatHistory: updatedHistory,
+        chatHistory: finalHistory,
         streaming: {
           ...state.streaming,
           activeStreams: newActiveStreams,
@@ -446,9 +491,25 @@ export function AppProvider({ children }: AppProviderProps) {
     dispatch({ type: APP_ACTIONS.ADD_MESSAGE, payload: messageWithColor });
   }, []);
 
-  const clearHistory = useCallback(() => {
-    dispatch({ type: APP_ACTIONS.CLEAR_HISTORY });
-  }, []);
+  const clearHistory = useCallback(async () => {
+    try {
+      // Clear local history first
+      dispatch({ type: APP_ACTIONS.CLEAR_HISTORY });
+      
+      // Clear agentCore history if authenticated
+      if (state.auth.isAuthenticated && state.auth.token) {
+        const agentCore = new AgentCoreService(OAUTH_CONFIG.AGENT_CORE_BASE_URL);
+        await agentCore.clearHistory(state.auth.token, {
+          timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          clientDatetime: new Date().toISOString(),
+          locale: process.env.LANG?.split('.')[0]?.replace('_', '-') || 'en',
+        });
+      }
+    } catch (error) {
+      console.error('Failed to clear agentCore history:', error);
+      // Continue with local clear even if remote clear fails
+    }
+  }, [state.auth.isAuthenticated, state.auth.token]);
 
   const setCurrentInput = useCallback((input: string) => {
     dispatch({ type: APP_ACTIONS.SET_CURRENT_INPUT, payload: input });
@@ -479,6 +540,25 @@ export function AppProvider({ children }: AppProviderProps) {
     // This will be handled by the useCommandNavigation hook
     // We keep this for interface compatibility
     dispatch({ type: 'NAVIGATE_COMMAND_LIST', payload: direction });
+  }, []);
+
+  // File mode action handlers
+  const setFileMode = useCallback((isFileMode: boolean) => {
+    dispatch({ type: 'SET_FILE_MODE', payload: isFileMode });
+  }, []);
+
+  const setFileQuery = useCallback((query: string) => {
+    dispatch({ type: 'SET_FILE_QUERY', payload: query });
+  }, []);
+
+  const setSelectedFileIndex = useCallback((index: number) => {
+    dispatch({ type: 'SET_SELECTED_FILE_INDEX', payload: index });
+  }, []);
+
+  const navigateFileList = useCallback((direction: 'up' | 'down') => {
+    // This will be handled by the useFileNavigation hook
+    // We keep this for interface compatibility
+    dispatch({ type: 'NAVIGATE_FILE_LIST', payload: direction });
   }, []);
 
   const setAuthenticated = useCallback((isAuth: boolean) => {
@@ -548,10 +628,26 @@ export function AppProvider({ children }: AppProviderProps) {
   );
 
   const completeStreaming = useCallback(
-    (messageId: string, finalContent?: string) => {
+    async (messageId: string, finalContent?: string) => {
+      // Process diff messages if finalContent contains file modifications
+      let diffMessages: ActionMessage[] = [];
+      let cleanedContent = finalContent;
+      
+      if (finalContent) {
+        try {
+          diffMessages = await processChatStreamForDiffs(finalContent);
+          // Remove file modification blocks from the content if we found any diffs
+          if (diffMessages.length > 0) {
+            cleanedContent = removeFileModificationBlocks(finalContent);
+          }
+        } catch (error) {
+          console.warn('Failed to process chat stream for diffs:', error);
+        }
+      }
+
       dispatch({
         type: 'COMPLETE_STREAMING',
-        payload: { messageId, finalContent },
+        payload: { messageId, finalContent: cleanedContent, diffMessages },
       });
     },
     []
@@ -674,6 +770,11 @@ export function AppProvider({ children }: AppProviderProps) {
       setCommandQuery,
       setSelectedCommandIndex,
       navigateCommandList,
+      // File mode actions
+      setFileMode,
+      setFileQuery,
+      setSelectedFileIndex,
+      navigateFileList,
       // Enhanced auth actions
       setAuthLoading,
       setAuthError,
@@ -704,6 +805,10 @@ export function AppProvider({ children }: AppProviderProps) {
       setCommandQuery,
       setSelectedCommandIndex,
       navigateCommandList,
+      setFileMode,
+      setFileQuery,
+      setSelectedFileIndex,
+      navigateFileList,
       setAuthLoading,
       setAuthError,
       setAuthSuccess,
