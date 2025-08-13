@@ -168,7 +168,7 @@ export interface AppActions {
     messageId: string
   ) => void;
   updateStreamingContent: (messageId: string, partialContent: string) => void;
-  completeStreaming: (messageId: string, finalContent?: string) => void;
+  completeStreaming: (messageId: string, finalContent?: string) => Promise<void>;
   stopStreaming: (messageId: string) => void;
   removeStreamingMessages: (messageIds: string[]) => void;
   setConnectionStatus: (status: ConnectionStatus) => void;

@@ -106,7 +106,7 @@ export function useStreamingSession() {
 
         // Mark streaming as complete
         if (!abortController.signal.aborted) {
-          actions.completeStreaming(streamingMessageId, fullContent);
+          await actions.completeStreaming(streamingMessageId, fullContent);
           actions.setConnectionStatus('connected');
           return streamingMessageId;
         } else {

@@ -11,6 +11,7 @@ import {
   AppState,
   AppActions,
   ChatMessage,
+  ActionMessage,
   Mode,
   modes,
   AuthState,
@@ -20,6 +21,8 @@ import {
 import { getAuthStatus, getToken } from '../services/oauth.js';
 import { APP_ACTIONS, OAUTH_CONFIG } from '../utils/constants.js';
 import { AgentCoreService } from '../services/agentcore.js';
+import { processChatStreamForDiffs } from '../utils/chatStreamDiffProcessor.js';
+import { removeFileModificationBlocks, filterStreamingContent } from '../utils/chatStreamParser.js';
 
 // Initial state
 const initialState: AppState = {
@@ -85,7 +88,7 @@ type AppAction =
     }
   | {
       type: 'COMPLETE_STREAMING';
-      payload: { messageId: string; finalContent?: string };
+      payload: { messageId: string; finalContent?: string; diffMessages?: ActionMessage[] };
     }
   | { type: 'STOP_STREAMING'; payload: { messageId: string } }
   | { type: 'REMOVE_STREAMING_MESSAGES'; payload: string[] }
@@ -251,12 +254,15 @@ function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'UPDATE_STREAMING_CONTENT': {
       const { messageId, partialContent } = action.payload;
+      // Filter out code blocks from streaming content in real-time
+      const filteredContent = filterStreamingContent(partialContent);
+      
       const updatedHistory = state.chatHistory.map(msg => {
         if (msg.id === messageId && msg.type === 'streaming') {
           return {
             ...msg,
-            partialContent,
-            content: partialContent, // For backward compatibility
+            partialContent: filteredContent,
+            content: filteredContent, // For backward compatibility
           };
         }
         return msg;
@@ -269,7 +275,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
     }
 
     case 'COMPLETE_STREAMING': {
-      const { messageId, finalContent } = action.payload;
+      const { messageId, finalContent, diffMessages } = action.payload;
       const newActiveStreams = new Map(state.streaming.activeStreams);
       newActiveStreams.delete(messageId);
 
@@ -286,9 +292,14 @@ function appReducer(state: AppState, action: AppAction): AppState {
         return msg;
       });
 
+      // Add diff messages if they exist
+      const finalHistory = diffMessages && diffMessages.length > 0 
+        ? [...updatedHistory, ...diffMessages]
+        : updatedHistory;
+
       return {
         ...state,
-        chatHistory: updatedHistory,
+        chatHistory: finalHistory,
         streaming: {
           ...state.streaming,
           activeStreams: newActiveStreams,
@@ -617,10 +628,26 @@ export function AppProvider({ children }: AppProviderProps) {
   );
 
   const completeStreaming = useCallback(
-    (messageId: string, finalContent?: string) => {
+    async (messageId: string, finalContent?: string) => {
+      // Process diff messages if finalContent contains file modifications
+      let diffMessages: ActionMessage[] = [];
+      let cleanedContent = finalContent;
+      
+      if (finalContent) {
+        try {
+          diffMessages = await processChatStreamForDiffs(finalContent);
+          // Remove file modification blocks from the content if we found any diffs
+          if (diffMessages.length > 0) {
+            cleanedContent = removeFileModificationBlocks(finalContent);
+          }
+        } catch (error) {
+          console.warn('Failed to process chat stream for diffs:', error);
+        }
+      }
+
       dispatch({
         type: 'COMPLETE_STREAMING',
-        payload: { messageId, finalContent },
+        payload: { messageId, finalContent: cleanedContent, diffMessages },
       });
     },
     []
