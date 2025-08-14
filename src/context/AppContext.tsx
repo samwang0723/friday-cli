@@ -635,7 +635,10 @@ export function AppProvider({ children }: AppProviderProps) {
       
       if (finalContent) {
         try {
-          diffMessages = await processChatStreamForDiffs(finalContent);
+          diffMessages = await processChatStreamForDiffs(finalContent, {
+            autoApply: true,
+            createBackups: true
+          });
           // Remove file modification blocks from the content if we found any diffs
           if (diffMessages.length > 0) {
             cleanedContent = removeFileModificationBlocks(finalContent);

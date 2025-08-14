@@ -8,7 +8,7 @@ interface FileUpdateActionProps {
 }
 
 export function FileUpdateAction({ message }: FileUpdateActionProps) {
-  const { filePath, additions = 0, removals = 0 } = message.metadata || {};
+  const { filePath, additions = 0, removals = 0, writeResult, autoApplied } = message.metadata || {};
   const { diffLines = [] } = message.metadata || {};
 
   const changesSummary: string[] = [];
@@ -30,6 +30,14 @@ export function FileUpdateAction({ message }: FileUpdateActionProps) {
           <Text> Update </Text>
           <Text color="cyan">{filePath}</Text>
           <Text color="white">{changesText}</Text>
+          {autoApplied && writeResult && (
+            <Text color={writeResult.success ? "green" : "red"}>
+              {writeResult.success ? " ✓ Applied" : ` ✗ Failed: ${writeResult.error}`}
+            </Text>
+          )}
+          {writeResult?.backup && (
+            <Text color="gray"> (backup created)</Text>
+          )}
         </Box>
       )}
       {diffLines.length > 0 && (
