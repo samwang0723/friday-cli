@@ -55,6 +55,33 @@ export const InputBox = memo(function InputBox() {
     () => currentInput.length
   );
 
+  // Helper function to convert cursor index to line/column
+  const getLineAndColumn = useCallback((index: number, text: string) => {
+    const lines = text.split('\n');
+    let currentIndex = 0;
+    for (let lineNum = 0; lineNum < lines.length; lineNum++) {
+      const lineLength = lines[lineNum].length;
+      if (currentIndex + lineLength >= index) {
+        return { line: lineNum, column: index - currentIndex };
+      }
+      currentIndex += lineLength + 1; // +1 for the newline character
+    }
+    return { line: lines.length - 1, column: lines[lines.length - 1].length };
+  }, []);
+
+  // Helper function to convert line/column to cursor index
+  const getIndexFromLineColumn = useCallback((line: number, column: number, text: string) => {
+    const lines = text.split('\n');
+    let index = 0;
+    for (let i = 0; i < line && i < lines.length; i++) {
+      index += lines[i].length + 1; // +1 for newline
+    }
+    if (line < lines.length) {
+      index += Math.min(column, lines[line].length);
+    }
+    return index;
+  }, []);
+
   // Enable bracketed paste mode so pasted content arrives as a single chunk
   useEffect(() => {
     if (process.stdout && process.stdout.isTTY) {
@@ -85,6 +112,16 @@ export const InputBox = memo(function InputBox() {
         [key: string]: unknown;
       }
     ) => {
+      // Handle Shift+Enter for newline insertion
+      if (key.return && key.shift) {
+        const index = Math.min(cursorIndex, currentInput.length);
+        const updated = 
+          currentInput.slice(0, index) + '\n' + currentInput.slice(index);
+        actions.setCurrentInput(updated);
+        setCursorIndex(index + 1);
+        return;
+      }
+
       // Handle regular Enter for submit
       if (key.return) {
         // Handle file mode selection - just update input, don't submit
@@ -246,8 +283,16 @@ export const InputBox = memo(function InputBox() {
         } else if (isFileMode) {
           navigateFileList('up');
         } else {
-          actions.navigateHistory('up');
-          setCursorIndex(Number.MAX_SAFE_INTEGER);
+          // Multi-line navigation: move cursor up one line
+          const { line, column } = getLineAndColumn(cursorIndex, currentInput);
+          if (line > 0) {
+            const newIndex = getIndexFromLineColumn(line - 1, column, currentInput);
+            setCursorIndex(newIndex);
+          } else {
+            // If at first line, navigate history
+            actions.navigateHistory('up');
+            setCursorIndex(Number.MAX_SAFE_INTEGER);
+          }
         }
         return;
       }
@@ -258,8 +303,17 @@ export const InputBox = memo(function InputBox() {
         } else if (isFileMode) {
           navigateFileList('down');
         } else {
-          actions.navigateHistory('down');
-          setCursorIndex(Number.MAX_SAFE_INTEGER);
+          // Multi-line navigation: move cursor down one line
+          const { line, column } = getLineAndColumn(cursorIndex, currentInput);
+          const lines = currentInput.split('\n');
+          if (line < lines.length - 1) {
+            const newIndex = getIndexFromLineColumn(line + 1, column, currentInput);
+            setCursorIndex(newIndex);
+          } else {
+            // If at last line, navigate history
+            actions.navigateHistory('down');
+            setCursorIndex(Number.MAX_SAFE_INTEGER);
+          }
         }
         return;
       }
@@ -464,6 +518,8 @@ export const InputBox = memo(function InputBox() {
       navigateFileList,
       getSelectedFile,
       cursorIndex,
+      getLineAndColumn,
+      getIndexFromLineColumn,
     ]
   ); // Depend on current state for immediate access
 
@@ -472,22 +528,40 @@ export const InputBox = memo(function InputBox() {
     isActive: true,
   });
 
-  // Memoize input display with a visible cursor
+  // Memoize input display with a visible cursor for multi-line support
   const inputDisplay = useMemo(() => {
     const index = Math.min(cursorIndex, currentInput.length);
-    const before = currentInput.slice(0, index);
-    const cursorChar = currentInput[index] ?? ' ';
-    const after =
-      index < currentInput.length ? currentInput.slice(index + 1) : '';
+    const lines = currentInput.split('\n');
+    const { line: cursorLine, column: cursorColumn } = getLineAndColumn(index, currentInput);
 
     return (
-      <Box flexDirection="row" width="100%" marginX={1}>
-        <Text>{before}</Text>
-        <Text inverse>{cursorChar}</Text>
-        <Text>{after}</Text>
+      <Box flexDirection="column" width="100%" marginX={1}>
+        {lines.map((lineText, lineIndex) => {
+          if (lineIndex === cursorLine) {
+            // This line contains the cursor
+            const before = lineText.slice(0, cursorColumn);
+            const cursorChar = lineText[cursorColumn] ?? ' ';
+            const after = cursorColumn < lineText.length ? lineText.slice(cursorColumn + 1) : '';
+            
+            return (
+              <Box key={lineIndex} flexDirection="row">
+                <Text>{before}</Text>
+                <Text inverse>{cursorChar}</Text>
+                <Text>{after}</Text>
+              </Box>
+            );
+          } else {
+            // Regular line without cursor
+            return (
+              <Box key={lineIndex} flexDirection="row">
+                <Text>{lineText}</Text>
+              </Box>
+            );
+          }
+        })}
       </Box>
     );
-  }, [currentInput, cursorIndex]);
+  }, [currentInput, cursorIndex, getLineAndColumn]);
 
   return (
     <Box borderStyle="round" borderColor="blue" paddingX={1}>
