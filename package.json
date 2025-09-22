@@ -57,7 +57,7 @@
     "ink-markdown": "^1.0.4",
     "marked": "^16.1.2",
     "marked-terminal": "^7.3.0",
-    "meow": "^13.2.0",
+    "meow": "^14.0.0",
     "open": "^10.2.0",
     "react": "^19.1.1",
     "use-interval": "^1.4.0"
