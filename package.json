@@ -53,7 +53,7 @@
     "dotenv": "^17.2.1",
     "figures": "^6.1.0",
     "ink": "^6.1.0",
-    "ink-link": "^4.1.0",
+    "ink-link": "^5.0.0",
     "ink-markdown": "^1.0.4",
     "marked": "^16.1.2",
     "marked-terminal": "^7.3.0",
