@@ -3,6 +3,7 @@ import {
   parseFileModifications,
   generateDiffLines,
 } from './chatStreamParser.js';
+import { applyFileModifications, FileWriteResult } from './fileWriter.js';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 
@@ -11,10 +12,29 @@ import * as path from 'node:path';
  */
 export async function processChatStreamForDiffs(
   response: string,
-  projectRoot: string = process.cwd()
+  options: {
+    projectRoot?: string;
+    autoApply?: boolean;
+    createBackups?: boolean;
+  } = {}
 ): Promise<ActionMessage[]> {
+  const {
+    projectRoot = process.cwd(),
+    autoApply = true,
+    createBackups = true
+  } = options;
   const modifications = parseFileModifications(response);
   const actionMessages: ActionMessage[] = [];
+
+  // First, generate all diffs using original file content
+  const diffData: Array<{
+    modification: typeof modifications[0];
+    originalCode: string;
+    isNewFile: boolean;
+    diffLines: DiffLine[];
+    additions: number;
+    removals: number;
+  }> = [];
 
   for (const modification of modifications) {
     const fullPath = path.resolve(projectRoot, modification.filepath);
@@ -29,7 +49,7 @@ export async function processChatStreamForDiffs(
         isNewFile = true;
       }
 
-      // Generate diff lines
+      // Generate diff lines using original content
       const diffLines = generateDiffLines(originalCode, modification.code);
 
       // Count additions and removals
@@ -48,31 +68,77 @@ export async function processChatStreamForDiffs(
         content: line.content,
       }));
 
-      // Create parent file update action
-      const action = isNewFile ? 'Created' : 'Updated';
+      // Store diff data for later use
+      diffData.push({
+        modification,
+        originalCode,
+        isNewFile,
+        diffLines: formattedDiffLines,
+        additions,
+        removals
+      });
 
-      const parentAction: ActionMessage = {
-        id: `file-update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        type: 'action',
-        actionType: 'file_update',
-        timestamp: new Date(),
-        content: `${action} (${modification.filepath})`,
-        icon: isNewFile ? '📄' : '📝',
-        metadata: {
-          filePath: modification.filepath,
-          additions,
-          removals,
-          diffLines: formattedDiffLines,
-        },
-      };
-
-      actionMessages.push(parentAction);
     } catch (error) {
       console.warn(
-        `Failed to process diff for ${modification.filepath}:`,
+        `Failed to generate diff for ${modification.filepath}:`,
         error
       );
     }
+  }
+
+  // Now apply file modifications if autoApply is enabled (after diffs are generated)
+  let writeResults: FileWriteResult[] = [];
+  if (autoApply && modifications.length > 0) {
+    try {
+      writeResults = await applyFileModifications(modifications, {
+        projectRoot,
+        createBackups
+      });
+    } catch (error) {
+      console.warn('Failed to apply file modifications:', error);
+    }
+  }
+
+  // Create action messages using the pre-calculated diff data
+  for (const data of diffData) {
+    const { modification, isNewFile, diffLines, additions, removals } = data;
+
+    // Find write result for this file
+    const writeResult = writeResults.find(r => r.filepath === modification.filepath);
+    const action = isNewFile ? 'Created' : 'Updated';
+    
+    // Determine status based on write result
+    let statusIcon = isNewFile ? '📄' : '📝';
+    let statusText = `${action} (${modification.filepath})`;
+    
+    if (autoApply && writeResult) {
+      if (writeResult.success) {
+        statusIcon = '✅';
+        statusText = `${action} (${modification.filepath})`;
+      } else {
+        statusIcon = '❌';
+        statusText = `Failed to ${action.toLowerCase()} (${modification.filepath}): ${writeResult.error}`;
+      }
+    }
+
+    const parentAction: ActionMessage = {
+      id: `file-update-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      type: 'action',
+      actionType: 'file_update',
+      timestamp: new Date(),
+      content: statusText,
+      icon: statusIcon,
+      metadata: {
+        filePath: modification.filepath,
+        additions,
+        removals,
+        diffLines: diffLines,
+        writeResult: writeResult,
+        autoApplied: autoApply
+      },
+    };
+
+    actionMessages.push(parentAction);
   }
 
   return actionMessages;

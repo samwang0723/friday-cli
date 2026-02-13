@@ -21,6 +21,14 @@ export interface ActionMessage extends BaseMessage {
     removals?: number;
     lineNumbers?: { start: number; end: number };
     diffLines?: DiffLine[];
+    writeResult?: {
+      filepath: string;
+      success: boolean;
+      error?: string;
+      created: boolean;
+      backup?: string;
+    };
+    autoApplied?: boolean;
   };
 }
 
